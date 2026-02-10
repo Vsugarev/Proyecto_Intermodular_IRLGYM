@@ -14,9 +14,11 @@ export const initDatabase = () => {
     if (!localStorage.getItem('user_stats')) saveWebData('user_stats', []);
     if (!localStorage.getItem('routines')) saveWebData('routines', []);
     if (!localStorage.getItem('routine_exercises')) saveWebData('routine_exercises', []);
+    if (!localStorage.getItem('exercise_history')) saveWebData('exercise_history', []);
     return;
   }
-  // Añadimos campos last_train y streak a user_stats
+
+  // SQLite: Añadimos tabla exercise_history
   db.execSync(`
     CREATE TABLE IF NOT EXISTS user_stats (
       userId TEXT PRIMARY KEY, 
@@ -38,12 +40,19 @@ export const initDatabase = () => {
       reps TEXT,
       weight TEXT DEFAULT '0'
     );
+    CREATE TABLE IF NOT EXISTS exercise_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      userId TEXT,
+      exercise_name TEXT,
+      weight REAL,
+      date TEXT
+    );
   `);
 };
 
-// --- GESTIÓN DE XP Y RACHAS (STREAKS) ---
+// --- GESTIÓN DE XP, RACHAS E HISTORIAL ---
 
-export const updateProgress = (uid, xpAmount) => {
+export const updateProgress = (uid, xpAmount, currentExercises = []) => {
   const today = new Date().toLocaleDateString();
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
@@ -51,6 +60,7 @@ export const updateProgress = (uid, xpAmount) => {
 
   if (Platform.OS === 'web') {
     const stats = getWebData('user_stats');
+    const history = getWebData('exercise_history');
     let user = stats.find(u => u.userId === uid);
     
     if (!user) {
@@ -60,23 +70,36 @@ export const updateProgress = (uid, xpAmount) => {
 
     // Lógica de Racha
     if (user.last_train === yesterdayStr) {
-      user.streak += 1; // Entrenó ayer, racha sube
+      user.streak += 1;
     } else if (user.last_train !== today) {
-      user.streak = 1; // Perdió la racha, vuelve a 1
+      user.streak = 1;
     }
 
     user.xp += xpAmount;
     user.last_train = today;
-    
-    saveWebData('user_stats', stats);
-    return user;
-  } else {
-    // SQLite: Aseguramos que el usuario existe
-    db.runSync('INSERT OR IGNORE INTO user_stats (userId, xp, streak, last_train) VALUES (?, 0, 0, NULL)', [uid]);
-    
-    const user = db.getFirstSync('SELECT * FROM user_stats WHERE userId = ?', [uid]);
-    let newStreak = 1;
 
+    // Guardar Historial para Gráficas
+    currentExercises.forEach(ex => {
+      if (parseFloat(ex.weight) > 0) {
+        history.push({
+          userId: uid,
+          exercise_name: ex.exercise_name,
+          weight: parseFloat(ex.weight),
+          date: today
+        });
+      }
+    });
+
+    saveWebData('user_stats', stats);
+    saveWebData('exercise_history', history);
+    return user;
+
+  } else {
+    // SQLite
+    db.runSync('INSERT OR IGNORE INTO user_stats (userId, xp, streak, last_train) VALUES (?, 0, 0, NULL)', [uid]);
+    const user = db.getFirstSync('SELECT * FROM user_stats WHERE userId = ?', [uid]);
+    
+    let newStreak = 1;
     if (user.last_train === yesterdayStr) {
       newStreak = user.streak + 1;
     } else if (user.last_train === today) {
@@ -87,7 +110,34 @@ export const updateProgress = (uid, xpAmount) => {
       'UPDATE user_stats SET xp = xp + ?, streak = ?, last_train = ? WHERE userId = ?',
       [xpAmount, newStreak, today, uid]
     );
+
+    // Guardar Historial en SQLite
+    currentExercises.forEach(ex => {
+      if (parseFloat(ex.weight) > 0) {
+        db.runSync(
+          'INSERT INTO exercise_history (userId, exercise_name, weight, date) VALUES (?, ?, ?, ?)',
+          [uid, ex.exercise_name, parseFloat(ex.weight), today]
+        );
+      }
+    });
+
     return { xp: user.xp + xpAmount, streak: newStreak };
+  }
+};
+
+// Función para obtener datos de la gráfica
+export const getExerciseHistory = (uid, exerciseName) => {
+  if (Platform.OS === 'web') {
+    const history = getWebData('exercise_history');
+    return history
+      .filter(h => h.userId === uid && h.exercise_name === exerciseName)
+      .map(h => h.weight);
+  } else {
+    const res = db.getAllSync(
+      'SELECT weight FROM exercise_history WHERE userId = ? AND exercise_name = ? ORDER BY id ASC',
+      [uid, exerciseName]
+    );
+    return res.map(h => h.weight);
   }
 };
 

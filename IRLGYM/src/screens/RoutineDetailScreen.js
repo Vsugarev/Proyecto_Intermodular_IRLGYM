@@ -1,17 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, Platform } from 'react-native';
-// Cambiamos addXP por updateProgress
-import { getExercisesByRoutine, updateExerciseStats, deleteExerciseFromRoutine, updateProgress } from '../services/database';
+import { 
+  getExercisesByRoutine, 
+  updateExerciseStats, 
+  deleteExerciseFromRoutine, 
+  updateProgress 
+} from '../services/database';
 import { auth } from '../services/firebaseConfig';
 import { Ionicons } from '@expo/vector-icons';
 import { globalStyles } from '../styles/globalStyles';
-import { Colors, BorderRadius } from '../styles/theme';
+import { Colors, BorderRadius, Spacing } from '../styles/theme';
 import StatInput from '../components/StatInput';
 import CustomButton from '../components/CustomButton';
+import ProgressChart from '../components/ProgressChart'; // Asegúrate de crear este componente
 
 const RoutineDetailScreen = ({ route, navigation }) => {
   const { routine } = route.params;
   const [exercises, setExercises] = useState([]);
+  const [expandedId, setExpandedId] = useState(null); // Para mostrar/ocultar gráfica
 
   const loadExercises = () => setExercises(getExercisesByRoutine(routine.id));
 
@@ -46,9 +52,7 @@ const RoutineDetailScreen = ({ route, navigation }) => {
     if (exercises.length === 0) return alert("Añade ejercicios antes de finalizar.");
     
     const points = exercises.length * 10;
-    
-    // Usamos la nueva función que actualiza XP y Racha
-    const newStats = updateProgress(auth.currentUser.uid, points);
+    const newStats = updateProgress(auth.currentUser.uid, points, exercises); // Pasamos ejercicios para el historial
     
     alert(`¡Entrenamiento guardado!\nGanaste ${points} XP.\nTu racha actual: ${newStats.streak} días.`);
     navigation.goBack();
@@ -62,35 +66,71 @@ const RoutineDetailScreen = ({ route, navigation }) => {
         data={exercises}
         keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={{ paddingBottom: 100 }}
-        renderItem={({ item }) => (
-          <View style={globalStyles.card}>
-            <View style={{ flex: 1 }}>
-              <Text style={globalStyles.subtitle}>{item.exercise_name}</Text>
-              <View style={[globalStyles.row, { marginTop: 10 }]}>
-                <StatInput 
-                  label="S" 
-                  val={item.series} 
-                  onChange={(t) => updateExerciseStats(item.id, t, item.reps, item.weight)} 
-                />
-                <StatInput 
-                  label="Kg" 
-                  val={item.weight} 
-                  onChange={(t) => updateExerciseStats(item.id, item.series, item.reps, t)} 
-                  isWeight 
-                />
-                <StatInput 
-                  label="R" 
-                  val={item.reps} 
-                  onChange={(t) => updateExerciseStats(item.id, item.series, t, item.weight)} 
-                />
-              </View>
+        renderItem={({ item }) => {
+          const isExpanded = expandedId === item.id;
+          
+          return (
+            <View style={[globalStyles.card, { flexDirection: 'column', alignItems: 'stretch' }]}>
+              <TouchableOpacity 
+                style={[globalStyles.row, { justifyContent: 'space-between' }]}
+                onPress={() => setExpandedId(isExpanded ? null : item.id)}
+              >
+                <View>
+                  <Text style={globalStyles.subtitle}>{item.exercise_name}</Text>
+                  <Text style={globalStyles.caption}>
+                    {isExpanded ? "Ocultar progreso" : "Ver progreso 📈"}
+                  </Text>
+                </View>
+                <View style={globalStyles.row}>
+                  <TouchableOpacity onPress={() => confirmDelete(item.id, item.exercise_name)} style={{ padding: 5 }}>
+                    <Ionicons name="close-circle" size={24} color={Colors.danger} />
+                  </TouchableOpacity>
+                  <Ionicons 
+                    name={isExpanded ? "chevron-up" : "chevron-down"} 
+                    size={24} 
+                    color={Colors.gray} 
+                    style={{ marginLeft: 10 }}
+                  />
+                </View>
+              </TouchableOpacity>
+
+              {isExpanded && (
+                <View style={localStyles.expandedContent}>
+                  {/* Pasamos datos reales o simulación si no hay historial aún */}
+                  <ProgressChart exerciseName={item.exercise_name} />
+                  
+                  <View style={[globalStyles.row, { justifyContent: 'space-around', marginTop: 15 }]}>
+                    <StatInput 
+                      label="S" 
+                      val={item.series} 
+                      onChange={(t) => {
+                        updateExerciseStats(item.id, t, item.reps, item.weight);
+                        loadExercises();
+                      }} 
+                    />
+                    <StatInput 
+                      label="Kg" 
+                      val={item.weight} 
+                      onChange={(t) => {
+                        updateExerciseStats(item.id, item.series, item.reps, t);
+                        loadExercises();
+                      }} 
+                      isWeight 
+                    />
+                    <StatInput 
+                      label="R" 
+                      val={item.reps} 
+                      onChange={(t) => {
+                        updateExerciseStats(item.id, item.series, t, item.weight);
+                        loadExercises();
+                      }} 
+                    />
+                  </View>
+                </View>
+              )}
             </View>
-            
-            <TouchableOpacity onPress={() => confirmDelete(item.id, item.exercise_name)} style={{ padding: 5 }}>
-              <Ionicons name="close-circle" size={28} color={Colors.danger} />
-            </TouchableOpacity>
-          </View>
-        )}
+          );
+        }}
         ListFooterComponent={exercises.length > 0 && (
           <View style={{ paddingHorizontal: 10 }}>
             <CustomButton 
@@ -103,7 +143,6 @@ const RoutineDetailScreen = ({ route, navigation }) => {
         )}
       />
       
-      {/* Botón Flotante (FAB) */}
       <TouchableOpacity 
         style={localStyles.fab} 
         onPress={() => navigation.navigate('MainApp', { screen: 'Biblioteca', params: { routineId: routine.id } })}
@@ -115,6 +154,12 @@ const RoutineDetailScreen = ({ route, navigation }) => {
 };
 
 const localStyles = StyleSheet.create({
+  expandedContent: {
+    marginTop: Spacing.m,
+    paddingTop: Spacing.m,
+    borderTopWidth: 1,
+    borderTopColor: Colors.lightGray,
+  },
   fab: { 
     position: 'absolute', 
     bottom: 30, 
