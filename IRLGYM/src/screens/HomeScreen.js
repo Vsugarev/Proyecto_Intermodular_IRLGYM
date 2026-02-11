@@ -10,53 +10,48 @@ import { useRoutines } from '../hooks/useRoutines';
 const HomeScreen = ({ navigation }) => {
   const [newRoutineName, setNewRoutineName] = useState('');
   const { routines, loadRoutines } = useRoutines();
-  const user = auth.currentUser;
 
-  // Solo usamos el focus para recargar, esto evita lecturas dobles innecesarias
+  // Mejorado: Solo una fuente de verdad para la carga
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', loadRoutines);
     return unsubscribe;
   }, [navigation, loadRoutines]);
 
   const handleAddRoutine = () => {
-    if (!newRoutineName.trim()) return; 
+    const trimmedName = newRoutineName.trim();
+    if (!trimmedName) return; 
     
-    const success = addRoutine(user.uid, newRoutineName.trim());
-    if (success) {
+    if (addRoutine(auth.currentUser.uid, trimmedName)) {
       setNewRoutineName('');
       loadRoutines();
     }
   };
 
   const handleDelete = (id, name) => {
-    const msg = `¿Seguro que quieres borrar "${name}"?`;
+    const performDelete = () => {
+      deleteRoutine(id);
+      loadRoutines();
+    };
+
     if (Platform.OS === 'web') {
-      if (confirm(msg)) {
-        deleteRoutine(id);
-        loadRoutines();
-      }
+      if (confirm(`¿Borrar "${name}"?`)) performDelete();
     } else {
-      Alert.alert("Borrar Rutina", msg, [
+      Alert.alert("Borrar", `¿Eliminar "${name}"?`, [
         { text: "Cancelar", style: "cancel" },
-        { text: "Borrar", style: "destructive", onPress: () => {
-          deleteRoutine(id);
-          loadRoutines();
-        }}
+        { text: "Borrar", style: "destructive", onPress: performDelete }
       ]);
     }
   };
 
   return (
     <View style={globalStyles.container}>
-      <Text style={[globalStyles.caption, { marginBottom: 10 }]}>Sesión: {user?.email}</Text>
-      
-      <View style={[globalStyles.row, { marginBottom: 20 }]}>
+      <View style={{ flexDirection: 'row', marginBottom: 20 }}>
         <TextInput 
           style={[globalStyles.input, { flex: 1, marginBottom: 0, marginRight: 10 }]} 
-          placeholder="Ej: Empuje, Pierna..." 
+          placeholder="Nueva rutina..." 
           value={newRoutineName} 
           onChangeText={setNewRoutineName}
-          maxLength={25}
+          maxLength={25} // Evita nombres que rompan la UI
         />
         <TouchableOpacity 
           style={[globalStyles.buttonPrimary, { width: 55, borderRadius: 12 }]} 
@@ -76,7 +71,7 @@ const HomeScreen = ({ navigation }) => {
           >
             <View style={{ flex: 1 }}>
               <Text style={globalStyles.subtitle}>{item.name}</Text>
-              <Text style={globalStyles.caption}>Creada: {item.date}</Text>
+              <Text style={globalStyles.caption}>📅 {item.date}</Text>
             </View>
             <TouchableOpacity onPress={() => handleDelete(item.id, item.name)} style={{ padding: 5 }}>
               <Ionicons name="trash-outline" size={20} color={Colors.danger} />
@@ -85,7 +80,7 @@ const HomeScreen = ({ navigation }) => {
         )}
         ListEmptyComponent={
           <Text style={{ textAlign: 'center', color: Colors.gray, marginTop: 40 }}>
-            No tienes rutinas aún. ¡Crea la primera arriba!
+            No hay rutinas. ¡Crea una!
           </Text>
         }
       />

@@ -6,11 +6,11 @@ export const useRoutines = () => {
   const [routines, setRoutines] = useState([]);
 
   const loadRoutines = useCallback(() => {
-    // Verificamos que haya un usuario antes de pedir datos
     if (auth.currentUser) {
       try {
         const data = getRoutines(auth.currentUser.uid);
-        setRoutines(data || []);
+        // Nos aseguramos de que siempre sea un Array para evitar errores en el FlatList
+        setRoutines(Array.isArray(data) ? data : []);
       } catch (e) {
         console.error("Error cargando rutinas:", e);
         setRoutines([]);
