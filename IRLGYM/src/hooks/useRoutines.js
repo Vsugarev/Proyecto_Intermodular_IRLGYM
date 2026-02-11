@@ -6,9 +6,15 @@ export const useRoutines = () => {
   const [routines, setRoutines] = useState([]);
 
   const loadRoutines = useCallback(() => {
+    // Verificamos que haya un usuario antes de pedir datos
     if (auth.currentUser) {
-      const data = getRoutines(auth.currentUser.uid);
-      setRoutines(data);
+      try {
+        const data = getRoutines(auth.currentUser.uid);
+        setRoutines(data || []);
+      } catch (e) {
+        console.error("Error cargando rutinas:", e);
+        setRoutines([]);
+      }
     }
   }, []);
 

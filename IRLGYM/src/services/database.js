@@ -6,10 +6,24 @@ if (Platform.OS !== 'web') {
   db = SQLite.openDatabaseSync('irlgym.db');
 }
 
-const getWebData = (key) => JSON.parse(localStorage.getItem(key)) || [];
-const saveWebData = (key, data) => localStorage.setItem(key, JSON.stringify(data));
+const getWebData = (key) => {
+  try {
+    return JSON.parse(localStorage.getItem(key)) || [];
+  } catch (e) {
+    console.error("Error leyendo localStorage", e);
+    return [];
+  }
+};
 
-// Formateador de fecha ISO (seguro para bases de datos)
+const saveWebData = (key, data) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+  } catch (e) {
+    console.error("Error guardando en localStorage", e);
+  }
+};
+
+// Formateadores seguros de fecha
 const getTodayStr = () => new Date().toISOString().split('T')[0];
 const getYesterdayStr = () => {
   const d = new Date();
@@ -26,11 +40,11 @@ export const initDatabase = () => {
     return;
   }
 
-  // SQLite: Creación de tablas base
   db.execSync(`
     CREATE TABLE IF NOT EXISTS user_stats (
       userId TEXT PRIMARY KEY, 
       xp INTEGER DEFAULT 0,
+      streak INTEGER DEFAULT 0,
       last_train TEXT
     );
     CREATE TABLE IF NOT EXISTS routines (
@@ -43,8 +57,8 @@ export const initDatabase = () => {
       id INTEGER PRIMARY KEY AUTOINCREMENT, 
       routine_id INTEGER, 
       exercise_name TEXT, 
-      series TEXT, 
-      reps TEXT,
+      series TEXT DEFAULT '0', 
+      reps TEXT DEFAULT '0', 
       weight TEXT DEFAULT '0'
     );
     CREATE TABLE IF NOT EXISTS exercise_history (
@@ -55,149 +69,116 @@ export const initDatabase = () => {
       date TEXT
     );
   `);
-
-  // MIGRACIÓN: Forzamos la creación de la columna streak por si la tabla ya existía
-  try {
-    db.execSync("ALTER TABLE user_stats ADD COLUMN streak INTEGER DEFAULT 0;");
-    console.log("Columna 'streak' verificada/añadida.");
-  } catch (e) {
-    // Si ya existe, no hace nada
-  }
 };
 
-// --- GESTIÓN DE XP, RACHAS E HISTORIAL ---
-
-export const updateProgress = (uid, xpAmount, currentExercises = []) => {
-  const today = getTodayStr();
-  const yesterdayStr = getYesterdayStr();
-
-  if (Platform.OS === 'web') {
-    const stats = getWebData('user_stats');
-    const history = getWebData('exercise_history');
-    let user = stats.find(u => u.userId === uid);
-    
-    if (!user) {
-      user = { userId: uid, xp: 0, streak: 0, last_train: null };
-      stats.push(user);
-    }
-
-    // Lógica de Racha
-    if (user.last_train === yesterdayStr) {
-      user.streak += 1;
-    } else if (user.last_train !== today) {
-      user.streak = 1;
-    }
-
-    user.xp += xpAmount;
-    user.last_train = today;
-
-    // Guardar Historial
-    currentExercises.forEach(ex => {
-      if (parseFloat(ex.weight) > 0) {
-        history.push({
-          userId: uid,
-          exercise_name: ex.exercise_name,
-          weight: parseFloat(ex.weight),
-          date: today
-        });
-      }
-    });
-
-    saveWebData('user_stats', stats);
-    saveWebData('exercise_history', history);
-    return user;
-
-  } else {
-    // SQLite: Aseguramos que el usuario existe
-    db.runSync('INSERT OR IGNORE INTO user_stats (userId, xp, streak, last_train) VALUES (?, 0, 0, NULL)', [uid]);
-    const user = db.getFirstSync('SELECT * FROM user_stats WHERE userId = ?', [uid]);
-    
-    let newStreak = user.streak || 0;
-    if (user.last_train === yesterdayStr) {
-      newStreak += 1;
-    } else if (user.last_train !== today) {
-      newStreak = 1;
-    }
-
-    db.runSync(
-      'UPDATE user_stats SET xp = xp + ?, streak = ?, last_train = ? WHERE userId = ?',
-      [xpAmount, newStreak, today, uid]
-    );
-
-    currentExercises.forEach(ex => {
-      if (parseFloat(ex.weight) > 0) {
-        db.runSync(
-          'INSERT INTO exercise_history (userId, exercise_name, weight, date) VALUES (?, ?, ?, ?)',
-          [uid, ex.exercise_name, parseFloat(ex.weight), today]
-        );
-      }
-    });
-
-    return { xp: user.xp + xpAmount, streak: newStreak };
-  }
-};
-
-export const getExerciseHistory = (uid, exerciseName) => {
-  if (Platform.OS === 'web') {
-    return getWebData('exercise_history')
-      .filter(h => h.userId === uid && h.exercise_name === exerciseName)
-      .map(h => h.weight);
-  } else {
-    const res = db.getAllSync(
-      'SELECT weight FROM exercise_history WHERE userId = ? AND exercise_name = ? ORDER BY id ASC',
-      [uid, exerciseName]
-    );
-    return res.map(h => h.weight);
-  }
-};
+// --- GESTIÓN DE STATS (SALUD MEJORADA) ---
 
 export const getUserStats = (uid) => {
-  if (Platform.OS === 'web') {
-    const user = getWebData('user_stats').find(u => u.userId === uid);
-    return user || { xp: 0, streak: 0, last_train: null };
+  const defaultStats = { userId: uid, xp: 0, streak: 0, last_train: null };
+  try {
+    if (Platform.OS === 'web') {
+      const allStats = getWebData('user_stats');
+      const user = allStats.find(s => s.userId === uid);
+      return user || defaultStats;
+    }
+    const res = db.getFirstSync('SELECT * FROM user_stats WHERE userId = ?', [uid]);
+    return res || defaultStats;
+  } catch (e) {
+    return defaultStats;
   }
-  const res = db.getFirstSync('SELECT * FROM user_stats WHERE userId = ?', [uid]);
-  return res || { xp: 0, streak: 0, last_train: null };
+};
+
+export const updateProgress = (uid, points, exercises) => {
+  const today = getTodayStr();
+  const yesterday = getYesterdayStr();
+  let stats = getUserStats(uid);
+
+  // Lógica de racha mejorada
+  if (stats.last_train === yesterday) {
+    stats.streak += 1;
+  } else if (stats.last_train !== today) {
+    stats.streak = 1;
+  }
+
+  stats.xp += points;
+  stats.last_train = today;
+
+  // Guardar stats del usuario
+  if (Platform.OS === 'web') {
+    const allStats = getWebData('user_stats').filter(s => s.userId !== uid);
+    allStats.push(stats);
+    saveWebData('user_stats', allStats);
+  } else {
+    db.runSync(
+      'INSERT OR REPLACE INTO user_stats (userId, xp, streak, last_train) VALUES (?, ?, ?, ?)',
+      [uid, stats.xp, stats.streak, stats.last_train]
+    );
+  }
+
+  // Guardar historial de ejercicios (para gráficas) de forma segura
+  exercises.forEach(ex => {
+    const weightNum = parseFloat(String(ex.weight).replace(',', '.')) || 0;
+    if (Platform.OS === 'web') {
+      const history = getWebData('exercise_history');
+      history.push({ userId: uid, exercise_name: ex.exercise_name, weight: weightNum, date: today });
+      saveWebData('exercise_history', history);
+    } else {
+      db.runSync(
+        'INSERT INTO exercise_history (userId, exercise_name, weight, date) VALUES (?, ?, ?, ?)',
+        [uid, ex.exercise_name, weightNum, today]
+      );
+    }
+  });
+
+  return stats;
 };
 
 // --- GESTIÓN DE RUTINAS ---
 
 export const getRoutines = (uid) => {
-  if (Platform.OS === 'web') return getWebData('routines').filter(r => r.userId === uid);
-  return db.getAllSync('SELECT * FROM routines WHERE userId = ?', [uid]);
+  try {
+    if (Platform.OS === 'web') return getWebData('routines').filter(r => r.userId === uid);
+    return db.getAllSync('SELECT * FROM routines WHERE userId = ?', [uid]);
+  } catch (e) {
+    return [];
+  }
 };
 
-export const addRoutine = (uid, name, desc, date) => {
-  if (!name.trim()) return false;
-  // Usamos el formato ISO para la fecha de creación interna también
-  const finalDate = date || getTodayStr(); 
-  
-  if (Platform.OS === 'web') {
-    const routines = getWebData('routines');
-    routines.push({ id: Date.now(), userId: uid, name, date: finalDate });
-    saveWebData('routines', routines);
+export const addRoutine = (uid, name) => {
+  const today = getTodayStr();
+  try {
+    if (Platform.OS === 'web') {
+      const r = getWebData('routines');
+      r.push({ id: Date.now(), userId: uid, name, date: today });
+      saveWebData('routines', r);
+      return true;
+    }
+    db.runSync('INSERT INTO routines (userId, name, date) VALUES (?, ?, ?)', [uid, name, today]);
     return true;
+  } catch (e) {
+    return false;
   }
-  return db.runSync('INSERT INTO routines (userId, name, date) VALUES (?, ?, ?)', [uid, name, finalDate]);
 };
 
 export const deleteRoutine = (id) => {
   if (Platform.OS === 'web') {
-    const routines = getWebData('routines').filter(r => r.id !== id);
-    const exercises = getWebData('routine_exercises').filter(e => e.routine_id !== id);
-    saveWebData('routines', routines);
-    saveWebData('routine_exercises', exercises);
-    return true;
+    saveWebData('routines', getWebData('routines').filter(r => r.id !== id));
+    saveWebData('routine_exercises', getWebData('routine_exercises').filter(e => e.routine_id !== id));
+  } else {
+    db.runSync('DELETE FROM routines WHERE id = ?', [id]);
+    db.runSync('DELETE FROM routine_exercises WHERE routine_id = ?', [id]);
   }
-  db.runSync('DELETE FROM routine_exercises WHERE routine_id = ?', [id]);
-  return db.runSync('DELETE FROM routines WHERE id = ?', [id]);
 };
 
 // --- GESTIÓN DE EJERCICIOS ---
 
 export const getExercisesByRoutine = (rid) => {
-  if (Platform.OS === 'web') return getWebData('routine_exercises').filter(e => e.routine_id === rid);
-  return db.getAllSync('SELECT * FROM routine_exercises WHERE routine_id = ?', [rid]);
+  try {
+    if (Platform.OS === 'web') return getWebData('routine_exercises').filter(e => e.routine_id === rid);
+    return db.getAllSync('SELECT * FROM routine_exercises WHERE routine_id = ?', [rid]);
+  } catch (e) {
+    return [];
+  }
 };
 
 export const addExerciseToRoutine = (rid, name) => {
@@ -211,21 +192,39 @@ export const addExerciseToRoutine = (rid, name) => {
 };
 
 export const updateExerciseStats = (id, s, r, w) => {
+  // Limpieza de datos: asegurar que si viene vacío se guarde "0"
+  const safeS = s || "0";
+  const safeR = r || "0";
+  const safeW = w || "0";
+
   if (Platform.OS === 'web') {
     const ex = getWebData('routine_exercises').map(item => 
-      item.id === id ? {...item, series: s, reps: r, weight: w} : item
+      item.id === id ? {...item, series: safeS, reps: safeR, weight: safeW} : item
     );
     saveWebData('routine_exercises', ex);
     return true;
   }
-  return db.runSync('UPDATE routine_exercises SET series = ?, reps = ?, weight = ? WHERE id = ?', [s, r, w, id]);
+  return db.runSync('UPDATE routine_exercises SET series = ?, reps = ?, weight = ? WHERE id = ?', [safeS, safeR, safeW, id]);
 };
 
 export const deleteExerciseFromRoutine = (id) => {
   if (Platform.OS === 'web') {
-    const ex = getWebData('routine_exercises').filter(item => item.id !== id);
-    saveWebData('routine_exercises', ex);
-    return true;
+    saveWebData('routine_exercises', getWebData('routine_exercises').filter(e => e.id !== id));
+  } else {
+    db.runSync('DELETE FROM routine_exercises WHERE id = ?', [id]);
   }
-  return db.runSync('DELETE FROM routine_exercises WHERE id = ?', [id]);
+};
+
+export const getExerciseHistory = (uid, exerciseName) => {
+  try {
+    if (Platform.OS === 'web') {
+      return getWebData('exercise_history')
+        .filter(h => h.userId === uid && h.exercise_name === exerciseName)
+        .map(h => h.weight);
+    }
+    const res = db.getAllSync('SELECT weight FROM exercise_history WHERE userId = ? AND exercise_name = ? ORDER BY date ASC', [uid, exerciseName]);
+    return res.map(r => r.weight);
+  } catch (e) {
+    return [];
+  }
 };
