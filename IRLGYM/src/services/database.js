@@ -9,6 +9,14 @@ if (Platform.OS !== 'web') {
 const getWebData = (key) => JSON.parse(localStorage.getItem(key)) || [];
 const saveWebData = (key, data) => localStorage.setItem(key, JSON.stringify(data));
 
+// Formateador de fecha ISO (seguro para bases de datos)
+const getTodayStr = () => new Date().toISOString().split('T')[0];
+const getYesterdayStr = () => {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return d.toISOString().split('T')[0];
+};
+
 export const initDatabase = () => {
   if (Platform.OS === 'web') {
     if (!localStorage.getItem('user_stats')) saveWebData('user_stats', []);
@@ -18,12 +26,11 @@ export const initDatabase = () => {
     return;
   }
 
-  // SQLite: Añadimos tabla exercise_history
+  // SQLite: Creación de tablas base
   db.execSync(`
     CREATE TABLE IF NOT EXISTS user_stats (
       userId TEXT PRIMARY KEY, 
       xp INTEGER DEFAULT 0,
-      streak INTEGER DEFAULT 0,
       last_train TEXT
     );
     CREATE TABLE IF NOT EXISTS routines (
@@ -48,15 +55,21 @@ export const initDatabase = () => {
       date TEXT
     );
   `);
+
+  // MIGRACIÓN: Forzamos la creación de la columna streak por si la tabla ya existía
+  try {
+    db.execSync("ALTER TABLE user_stats ADD COLUMN streak INTEGER DEFAULT 0;");
+    console.log("Columna 'streak' verificada/añadida.");
+  } catch (e) {
+    // Si ya existe, no hace nada
+  }
 };
 
 // --- GESTIÓN DE XP, RACHAS E HISTORIAL ---
 
 export const updateProgress = (uid, xpAmount, currentExercises = []) => {
-  const today = new Date().toLocaleDateString();
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = yesterday.toLocaleDateString();
+  const today = getTodayStr();
+  const yesterdayStr = getYesterdayStr();
 
   if (Platform.OS === 'web') {
     const stats = getWebData('user_stats');
@@ -78,7 +91,7 @@ export const updateProgress = (uid, xpAmount, currentExercises = []) => {
     user.xp += xpAmount;
     user.last_train = today;
 
-    // Guardar Historial para Gráficas
+    // Guardar Historial
     currentExercises.forEach(ex => {
       if (parseFloat(ex.weight) > 0) {
         history.push({
@@ -95,15 +108,15 @@ export const updateProgress = (uid, xpAmount, currentExercises = []) => {
     return user;
 
   } else {
-    // SQLite
+    // SQLite: Aseguramos que el usuario existe
     db.runSync('INSERT OR IGNORE INTO user_stats (userId, xp, streak, last_train) VALUES (?, 0, 0, NULL)', [uid]);
     const user = db.getFirstSync('SELECT * FROM user_stats WHERE userId = ?', [uid]);
     
-    let newStreak = 1;
+    let newStreak = user.streak || 0;
     if (user.last_train === yesterdayStr) {
-      newStreak = user.streak + 1;
-    } else if (user.last_train === today) {
-      newStreak = user.streak;
+      newStreak += 1;
+    } else if (user.last_train !== today) {
+      newStreak = 1;
     }
 
     db.runSync(
@@ -111,7 +124,6 @@ export const updateProgress = (uid, xpAmount, currentExercises = []) => {
       [xpAmount, newStreak, today, uid]
     );
 
-    // Guardar Historial en SQLite
     currentExercises.forEach(ex => {
       if (parseFloat(ex.weight) > 0) {
         db.runSync(
@@ -125,11 +137,9 @@ export const updateProgress = (uid, xpAmount, currentExercises = []) => {
   }
 };
 
-// Función para obtener datos de la gráfica
 export const getExerciseHistory = (uid, exerciseName) => {
   if (Platform.OS === 'web') {
-    const history = getWebData('exercise_history');
-    return history
+    return getWebData('exercise_history')
       .filter(h => h.userId === uid && h.exercise_name === exerciseName)
       .map(h => h.weight);
   } else {
@@ -159,13 +169,16 @@ export const getRoutines = (uid) => {
 
 export const addRoutine = (uid, name, desc, date) => {
   if (!name.trim()) return false;
+  // Usamos el formato ISO para la fecha de creación interna también
+  const finalDate = date || getTodayStr(); 
+  
   if (Platform.OS === 'web') {
     const routines = getWebData('routines');
-    routines.push({ id: Date.now(), userId: uid, name, date });
+    routines.push({ id: Date.now(), userId: uid, name, date: finalDate });
     saveWebData('routines', routines);
     return true;
   }
-  return db.runSync('INSERT INTO routines (userId, name, date) VALUES (?, ?, ?)', [uid, name, date]);
+  return db.runSync('INSERT INTO routines (userId, name, date) VALUES (?, ?, ?)', [uid, name, finalDate]);
 };
 
 export const deleteRoutine = (id) => {

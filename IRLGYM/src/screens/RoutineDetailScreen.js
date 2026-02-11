@@ -7,17 +7,19 @@ import {
   updateProgress 
 } from '../services/database';
 import { auth } from '../services/firebaseConfig';
+import { useStats } from '../context/StatsContext'; // <-- NUEVO
 import { Ionicons } from '@expo/vector-icons';
 import { globalStyles } from '../styles/globalStyles';
 import { Colors, BorderRadius, Spacing } from '../styles/theme';
 import StatInput from '../components/StatInput';
 import CustomButton from '../components/CustomButton';
-import ProgressChart from '../components/ProgressChart'; // Asegúrate de crear este componente
+import ProgressChart from '../components/ProgressChart';
 
 const RoutineDetailScreen = ({ route, navigation }) => {
   const { routine } = route.params;
   const [exercises, setExercises] = useState([]);
-  const [expandedId, setExpandedId] = useState(null); // Para mostrar/ocultar gráfica
+  const [expandedId, setExpandedId] = useState(null);
+  const { reloadStats } = useStats(); // <-- CONSUMIMOS EL CONTEXTO
 
   const loadExercises = () => setExercises(getExercisesByRoutine(routine.id));
 
@@ -29,17 +31,12 @@ const RoutineDetailScreen = ({ route, navigation }) => {
 
   const confirmDelete = (id, name) => {
     if (Platform.OS === 'web') {
-      const proceed = confirm(`¿Estás seguro de que quieres eliminar "${name}"?`);
-      if (proceed) handleDelete(id);
+      if (confirm(`¿Estás seguro de que quieres eliminar "${name}"?`)) handleDelete(id);
     } else {
-      Alert.alert(
-        "Eliminar Ejercicio",
-        `¿Quieres quitar "${name}" de esta rutina?`,
-        [
-          { text: "Cancelar", style: "cancel" },
-          { text: "Eliminar", style: "destructive", onPress: () => handleDelete(id) }
-        ]
-      );
+      Alert.alert("Eliminar", `¿Quitar "${name}"?`, [
+        { text: "Cancelar", style: "cancel" },
+        { text: "Eliminar", style: "destructive", onPress: () => handleDelete(id) }
+      ]);
     }
   };
 
@@ -49,13 +46,24 @@ const RoutineDetailScreen = ({ route, navigation }) => {
   };
 
   const handleFinishWorkout = () => {
-    if (exercises.length === 0) return alert("Añade ejercicios antes de finalizar.");
+    if (exercises.length === 0) {
+      return Platform.OS === 'web' ? alert("Añade ejercicios") : Alert.alert("Error", "Añade ejercicios");
+    }
     
     const points = exercises.length * 10;
-    const newStats = updateProgress(auth.currentUser.uid, points, exercises); // Pasamos ejercicios para el historial
+    const res = updateProgress(auth.currentUser.uid, points, exercises);
     
-    alert(`¡Entrenamiento guardado!\nGanaste ${points} XP.\nTu racha actual: ${newStats.streak} días.`);
-    navigation.goBack();
+    // ESTO ES CLAVE: Avisamos a toda la app que el XP cambió
+    reloadStats(); 
+
+    const msg = `¡Entrenamiento guardado!\n+${points} XP\nRacha: ${res.streak} días.`;
+    
+    if (Platform.OS === 'web') {
+      alert(msg);
+      navigation.goBack();
+    } else {
+      Alert.alert("¡Buen trabajo!", msg, [{ text: "OK", onPress: () => navigation.goBack() }]);
+    }
   };
 
   return (
@@ -68,63 +76,31 @@ const RoutineDetailScreen = ({ route, navigation }) => {
         contentContainerStyle={{ paddingBottom: 100 }}
         renderItem={({ item }) => {
           const isExpanded = expandedId === item.id;
-          
           return (
             <View style={[globalStyles.card, { flexDirection: 'column', alignItems: 'stretch' }]}>
               <TouchableOpacity 
-                style={[globalStyles.row, { justifyContent: 'space-between' }]}
+                style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
                 onPress={() => setExpandedId(isExpanded ? null : item.id)}
               >
                 <View>
                   <Text style={globalStyles.subtitle}>{item.exercise_name}</Text>
-                  <Text style={globalStyles.caption}>
-                    {isExpanded ? "Ocultar progreso" : "Ver progreso 📈"}
-                  </Text>
+                  <Text style={globalStyles.caption}>{isExpanded ? "Ocultar" : "Ver progreso 📈"}</Text>
                 </View>
-                <View style={globalStyles.row}>
-                  <TouchableOpacity onPress={() => confirmDelete(item.id, item.exercise_name)} style={{ padding: 5 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <TouchableOpacity onPress={() => confirmDelete(item.id, item.exercise_name)} style={{ padding: 10 }}>
                     <Ionicons name="close-circle" size={24} color={Colors.danger} />
                   </TouchableOpacity>
-                  <Ionicons 
-                    name={isExpanded ? "chevron-up" : "chevron-down"} 
-                    size={24} 
-                    color={Colors.gray} 
-                    style={{ marginLeft: 10 }}
-                  />
+                  <Ionicons name={isExpanded ? "chevron-up" : "chevron-down"} size={24} color={Colors.gray} />
                 </View>
               </TouchableOpacity>
 
               {isExpanded && (
                 <View style={localStyles.expandedContent}>
-                  {/* Pasamos datos reales o simulación si no hay historial aún */}
                   <ProgressChart exerciseName={item.exercise_name} />
-                  
-                  <View style={[globalStyles.row, { justifyContent: 'space-around', marginTop: 15 }]}>
-                    <StatInput 
-                      label="S" 
-                      val={item.series} 
-                      onChange={(t) => {
-                        updateExerciseStats(item.id, t, item.reps, item.weight);
-                        loadExercises();
-                      }} 
-                    />
-                    <StatInput 
-                      label="Kg" 
-                      val={item.weight} 
-                      onChange={(t) => {
-                        updateExerciseStats(item.id, item.series, item.reps, t);
-                        loadExercises();
-                      }} 
-                      isWeight 
-                    />
-                    <StatInput 
-                      label="R" 
-                      val={item.reps} 
-                      onChange={(t) => {
-                        updateExerciseStats(item.id, item.series, t, item.weight);
-                        loadExercises();
-                      }} 
-                    />
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginTop: 15 }}>
+                    <StatInput label="S" val={item.series} onChange={(t) => { updateExerciseStats(item.id, t, item.reps, item.weight); loadExercises(); }} />
+                    <StatInput label="Kg" val={item.weight} isWeight onChange={(t) => { updateExerciseStats(item.id, item.series, item.reps, t); loadExercises(); }} />
+                    <StatInput label="R" val={item.reps} onChange={(t) => { updateExerciseStats(item.id, item.series, t, item.weight); loadExercises(); }} />
                   </View>
                 </View>
               )}
@@ -132,14 +108,7 @@ const RoutineDetailScreen = ({ route, navigation }) => {
           );
         }}
         ListFooterComponent={exercises.length > 0 && (
-          <View style={{ paddingHorizontal: 10 }}>
-            <CustomButton 
-              title="FINALIZAR RUTINA" 
-              type="success" 
-              onPress={handleFinishWorkout} 
-              style={{ marginTop: 20 }} 
-            />
-          </View>
+          <CustomButton title="FINALIZAR RUTINA" type="success" onPress={handleFinishWorkout} style={{ marginTop: 20 }} />
         )}
       />
       
@@ -154,28 +123,8 @@ const RoutineDetailScreen = ({ route, navigation }) => {
 };
 
 const localStyles = StyleSheet.create({
-  expandedContent: {
-    marginTop: Spacing.m,
-    paddingTop: Spacing.m,
-    borderTopWidth: 1,
-    borderTopColor: Colors.lightGray,
-  },
-  fab: { 
-    position: 'absolute', 
-    bottom: 30, 
-    right: 30, 
-    backgroundColor: Colors.primary, 
-    width: 65, 
-    height: 65, 
-    borderRadius: BorderRadius.round, 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-  }
+  expandedContent: { marginTop: Spacing.m, paddingTop: Spacing.m, borderTopWidth: 1, borderTopColor: Colors.lightGray },
+  fab: { position: 'absolute', bottom: 30, right: 30, backgroundColor: Colors.primary, width: 65, height: 65, borderRadius: 33, justifyContent: 'center', alignItems: 'center', elevation: 5 }
 });
 
 export default RoutineDetailScreen;

@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { initDatabase } from './src/services/database';
 import AppNavigator from './src/navigation/AppNavigator';
+import { StatsProvider } from './src/context/StatsContext';
 
 export default function App() {
   useEffect(() => {
@@ -9,8 +10,10 @@ export default function App() {
   }, []);
 
   return (
-    <NavigationContainer>
-      <AppNavigator />
-    </NavigationContainer>
+    <StatsProvider>
+      <NavigationContainer>
+        <AppNavigator />
+      </NavigationContainer>
+    </StatsProvider>
   );
 }
