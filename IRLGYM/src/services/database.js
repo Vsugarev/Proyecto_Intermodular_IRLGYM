@@ -115,6 +115,7 @@ export const updateProgress = (uid, points, exercises) => {
     );
   }
 
+
   // Guardar historial de ejercicios (para gráficas) de forma segura
   exercises.forEach(ex => {
     const weightNum = parseFloat(String(ex.weight).replace(',', '.')) || 0;
@@ -131,6 +132,23 @@ export const updateProgress = (uid, points, exercises) => {
   });
 
   return stats;
+};
+
+export const getTrainingDays = (uid) => {
+  if (Platform.OS === 'web') {
+    const history = getWebData('exercise_history');
+    // Filtramos por usuario y extraemos solo las fechas únicas
+    const dates = history
+      .filter(h => h.userId === uid)
+      .map(h => h.date);
+    return [...new Set(dates)]; // Retorna array de fechas sin duplicados
+  } else {
+    const res = db.getAllSync(
+      'SELECT DISTINCT date FROM exercise_history WHERE userId = ?',
+      [uid]
+    );
+    return res.map(r => r.date);
+  }
 };
 
 // --- GESTIÓN DE RUTINAS ---

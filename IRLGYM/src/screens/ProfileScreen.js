@@ -1,23 +1,40 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Platform, StyleSheet } from 'react-native';
 import { signOut } from 'firebase/auth';
 import { auth } from '../services/firebaseConfig';
 import { useStats } from '../context/StatsContext';
+import { getTrainingDays } from '../services/database'; // Importamos la función de historial
 import { Ionicons } from '@expo/vector-icons';
 import { globalStyles } from '../styles/globalStyles';
 import { Colors, BorderRadius } from '../styles/theme';
-import Badge from '../components/Badge'; // Usamos tu componente existente
+import Badge from '../components/Badge';
 
 const ProfileScreen = ({ navigation }) => {
-  const { stats } = useStats(); // Obtenemos XP y Racha del contexto
+  const { stats } = useStats(); 
   const user = auth.currentUser;
+  const [trainedDates, setTrainedDates] = useState([]);
+
+  // --- CARGA DEL HISTORIAL DE DÍAS ENTRENADOS ---
+  useEffect(() => {
+    const loadHistory = () => {
+      if (user) {
+        const dates = getTrainingDays(user.uid);
+        setTrainedDates(dates);
+      }
+    };
+    
+    loadHistory();
+    // Recargar cuando volvemos a la pantalla para ver cambios recientes
+    const unsubscribe = navigation.addListener('focus', loadHistory);
+    return unsubscribe;
+  }, [navigation, user, stats.last_train]);
 
   // --- LÓGICA DE NIVEL Y BARRA DE PROGRESO ---
-  const level = Math.floor(stats.xp / 100) + 1; //
-  const xpInLevel = stats.xp % 100; // XP acumulado en el nivel actual
-  const progress = xpInLevel / 100; // Porcentaje para la barra (0.0 a 1.0)
+  const level = Math.floor(stats.xp / 100) + 1;
+  const xpInLevel = stats.xp % 100;
+  const progress = xpInLevel / 100;
 
-  // --- LÓGICA DE CALENDARIO (DÍAS DE HIERRO) ---
+  // --- LÓGICA DE CALENDARIO (ÚLTIMOS 7 DÍAS) ---
   const weekDays = useMemo(() => {
     const days = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
     const today = new Date();
@@ -34,7 +51,7 @@ const ProfileScreen = ({ navigation }) => {
       });
     }
     return currentWeek;
-  }, [stats.last_train]); // Se refresca si cambia la fecha de último entreno
+  }, [stats.last_train]);
 
   const handleLogout = async () => {
     try {
@@ -74,11 +91,13 @@ const ProfileScreen = ({ navigation }) => {
           </Text>
         </View>
 
-        {/* 2. DÍAS DE HIERRO (CALENDARIO) */}
+        {/* 2. DÍAS DE HIERRO (CALENDARIO MULTI-DÍA CORREGIDO) */}
         <Text style={localStyles.sectionTitle}>Días de Hierro</Text>
         <View style={localStyles.streakCalendar}>
           {weekDays.map((day, index) => {
-            const entrenado = stats.last_train === day.date; //
+            // AHORA COMPROBAMOS EN EL HISTORIAL COMPLETO
+            const entrenado = trainedDates.includes(day.date); 
+            
             return (
               <View key={index} style={{ alignItems: 'center' }}>
                 <Text style={[globalStyles.caption, day.isToday && { color: Colors.primary, fontWeight: 'bold' }]}>
@@ -87,7 +106,7 @@ const ProfileScreen = ({ navigation }) => {
                 <View style={[
                   localStyles.dayCircle, 
                   entrenado ? { backgroundColor: '#FF9500' } : { backgroundColor: Colors.lightGray },
-                  day.isToday && !entrenado && { borderWeight: 2, borderColor: Colors.primary, borderWidth: 1 }
+                  day.isToday && !entrenado && { borderWidth: 1, borderColor: Colors.primary }
                 ]}>
                   {entrenado ? (
                     <Ionicons name="flame" size={18} color="white" />
@@ -112,7 +131,7 @@ const ProfileScreen = ({ navigation }) => {
           </View>
         </View>
 
-        {/* 4. LOGROS (Usando tu componente Badge) */}
+        {/* 4. LOGROS */}
         <Text style={[localStyles.sectionTitle, { marginTop: 30 }]}>Logros</Text>
         <View style={localStyles.achievementsGrid}>
           <Badge icon="star" title="Novato" unlocked={stats.xp >= 10} />
