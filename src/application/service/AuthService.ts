@@ -4,7 +4,7 @@ import {
   signOut 
 } from 'firebase/auth';
 import { auth } from '../../infrastructure/config/firebase';
-import { UserProfileRepository, UserStatsRepository } from '../../data/repositories';
+import { UserProfileRepository, UserStatsRepository } from '../../data/repositories/syncManager';
 import { UserProfile, UserStats } from '../../domain/entities/User';
 
 export class AuthService {

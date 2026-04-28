@@ -3,35 +3,42 @@ import { UserProgressNode } from '../../../domain/entities/SkillNode';
 import { IProgressRepository } from '../../../domain/repositoriesInterface/IProgressRepository';
 
 export class SQLiteProgressRepository implements IProgressRepository {
-
   async saveProgress(progress: UserProgressNode): Promise<void> {
     const db = await SQLiteClient.getInstance();
     await db.runAsync(
-      'INSERT OR REPLACE INTO user_progress (userId, nodeId, status, currentProgress) VALUES (?, ?, ?, ?)',
-      [progress.userId, progress.nodeId, progress.status, progress.currentProgress]
+      'INSERT OR REPLACE INTO user_progress_nodes (userId, nodeId, status, current_progress, sync_status) VALUES (?, ?, ?, ?, ?)',
+      [progress.userId, progress.nodeId, progress.status, progress.currentProgress, 1]
     );
   }
 
   async findProgress(userId: string, nodeId: string): Promise<UserProgressNode | null> {
     const db = await SQLiteClient.getInstance();
-    return await db.getFirstAsync<UserProgressNode>(
-      'SELECT * FROM user_progress WHERE userId = ? AND nodeId = ?',
+    const row = await db.getFirstAsync<any>(
+      'SELECT userId, nodeId, status, current_progress as currentProgress FROM user_progress_nodes WHERE userId = ? AND nodeId = ?',
       [userId, nodeId]
     );
+    return row ? (row as UserProgressNode) : null;
   }
 
   async findAllPlayerProgress(userId: string): Promise<UserProgressNode[]> {
     const db = await SQLiteClient.getInstance();
-    return await db.getAllAsync<UserProgressNode>('SELECT * FROM user_progress WHERE userId = ?', [userId]);
+    const rows = await db.getAllAsync<any>(
+      'SELECT userId, nodeId, status, current_progress as currentProgress FROM user_progress_nodes WHERE userId = ?', 
+      [userId]
+    );
+    return rows as UserProgressNode[];
   }
 
   async deleteProgress(userId: string, nodeId: string): Promise<void> {
     const db = await SQLiteClient.getInstance();
-    await db.runAsync('DELETE FROM user_progress WHERE userId = ? AND nodeId = ?', [userId, nodeId]);
+    await db.runAsync('DELETE FROM user_progress_nodes WHERE userId = ? AND nodeId = ?', [userId, nodeId]);
   }
 
-async resetAllProgress(userId: string): Promise<void> {
-  const db = await SQLiteClient.getInstance();
-  await db.runAsync('DELETE FROM user_progress WHERE userId = ?', [userId]);
-}
+  async resetAllProgress(userId: string): Promise<void> {
+    const db = await SQLiteClient.getInstance();
+    await db.runAsync(
+      'UPDATE user_progress_nodes SET status = "locked", current_progress = 0, sync_status = 1 WHERE userId = ?',
+      [userId]
+    );
+  }
 }

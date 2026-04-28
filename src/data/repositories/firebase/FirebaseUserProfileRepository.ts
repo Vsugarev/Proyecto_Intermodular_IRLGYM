@@ -7,7 +7,6 @@ export class FirebaseUserProfileRepository implements IUserProfileRepository {
   private collection = 'user_profiles';
 
   async save(profile: UserProfile): Promise<void> {
-    // Usamos setDoc con ID fijo para que el perfil coincida con el ID de Auth
     await setDoc(doc(db, this.collection, profile.id), profile);
   }
 

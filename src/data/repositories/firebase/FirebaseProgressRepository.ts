@@ -1,7 +1,7 @@
 import { db } from '../../../infrastructure/config/firebase';
 import { doc, getDoc, getDocs, collection, query, where, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
-import { IProgressRepository } from '../../../domain/repositories/IProgressRepository';
 import { UserProgressNode } from '../../../domain/entities/SkillNode';
+import { IProgressRepository } from '../../../domain/repositoriesInterface/IProgressRepository';
 
 export class FirebaseProgressRepository implements IProgressRepository {
   private col = 'user_progress';

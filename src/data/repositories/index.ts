@@ -1,98 +1,63 @@
-import { SQLiteUserStatsRepository } from './sqlite/SQLiteUserStatsRepository';
-import { SQLiteUserProfileRepository } from './sqlite/SQLiteUserProfileRepository';
-import { SQLiteExerciseRepository } from './sqlite/SQLiteExerciseRepository';
+// data/repositories/index.ts
 import { SQLiteWorkoutRepository } from './sqlite/SQLiteWorkoutRepository';
 import { SQLiteLogRepository } from './sqlite/SQLiteLogRepository';
+import { FirebaseLogRepository } from './firebase/FirebaseLogRepository';
+import { SQLiteUserStatsRepository } from './sqlite/SQLiteUserStatsRepository';
+import { FirebaseUserStatsRepository } from './firebase/FirebaseUserStatsRepository';
+import { FirebaseWorkoutRepository } from './firebase/FirebaseWorkoutRepository';
+import { SQLiteUserProfileRepository } from './sqlite/SQLiteUserProfileRepository';
+import { FirebaseUserProfileRepository } from './firebase/FirebaseUserProfileRepository';
+import { SQLiteExerciseRepository } from './sqlite/SQLiteExerciseRepository';
 import { SQLiteSkillRepository } from './sqlite/SQLiteSkillRepository';
 import { SQLiteProgressRepository } from './sqlite/SQLiteProgressRepository';
 
-import { FirebaseUserProfileRepository } from './firebase/FirebaseUserProfileRepository';
-import { FirebaseWorkoutRepository } from './firebase/FirebaseWorkoutRepository';
-import { FirebaseLogRepository } from './firebase/FirebaseLogRepository';
-import { FirebaseUserStatsRepository } from './firebase/FirebaseUserStatsRepository';
+interface BaseRepository {
+  save: (data: any) => Promise<void>;
+}
 
-import { IWorkoutRepository } from '../../domain/repositoriesInterface/IWorkoutRepository';
-import { ILogRepository } from '../../domain/repositoriesInterface/ILogRepository';
-import { IUserStatsRepository } from '../../domain/repositoriesInterface/IUserStatsRepository';
-import { IUserProfileRepository } from '../../domain/repositoriesInterface/IUserProfileRepository';
+class HybridRepository<T extends BaseRepository> {
+  constructor(private local: any, private cloud: any) {}
 
-/**
- * HYBRID REPOSITORY - Gestión inteligente Local + Nube
- */
-class HybridRepository<T> {
-  constructor(
-    protected local: any,
-    protected cloud?: any
-  ) {}
-
-  async save(data: any): Promise<void> {
-    // Primero aseguramos el dato en el dispositivo (SQLite)
+  async save(data: any) {
     await this.local.save(data);
-    
-    // Luego intentamos subirlo a Firebase
-    if (this.cloud) {
-      try {
-        await this.cloud.save(data);
-      } catch (e) {
-        console.warn("Cloud Sync (Save): Los datos se guardaron solo localmente.");
+
+    try {
+      await this.cloud.save(data);
+      console.log("Guardado en la nube también.");
+
+      if (this.local.markAsSynced) {
+        await this.local.markAsSynced(data.id);
       }
+    } catch (error) {
+      console.log("Sin conexión, se subirá más tarde mediante SyncManager.");
     }
   }
 
-  async update(data: any): Promise<void> {
-    await this.local.update(data);
-    if (this.cloud) {
-      try {
-        await this.cloud.update(data);
-      } catch (e) {
-        console.warn("Cloud Sync (Update): Cambio guardado solo en local.");
-      }
-    }
-  }
-
-  async delete(id: string): Promise<void> {
-    // Detectamos si el repositorio usa 'delete' o 'deleteByUserId'
-    const localDelete = this.local.delete ? this.local.delete.bind(this.local) : this.local.deleteByUserId.bind(this.local);
-    await localDelete(id);
-
-    if (this.cloud) {
-      try {
-        const cloudDelete = this.cloud.delete ? this.cloud.delete.bind(this.cloud) : this.cloud.deleteByUserId.bind(this.cloud);
-        await cloudDelete(id);
-      } catch (e) {
-        console.warn("Cloud Sync (Delete): No se pudo eliminar en la nube.");
-      }
-    }
-  }
-
-  // Métodos de consulta (Siempre prioridad Local para velocidad)
   async findById(id: string) { return await this.local.findById(id); }
   async findByUserId(userId: string) { return await this.local.findByUserId(userId); }
   async findAllByUserId(userId: string) { return await this.local.findAllByUserId(userId); }
   async findInProgressByUserId(userId: string) { return await this.local.findInProgressByUserId(userId); }
 }
 
-// --- INSTANCIAS (SINGLETONS) ---
-
-export const WorkoutRepository: IWorkoutRepository = new HybridRepository<IWorkoutRepository>(
+export const WorkoutRepository = new HybridRepository(
   new SQLiteWorkoutRepository(),
   new FirebaseWorkoutRepository()
-) as unknown as IWorkoutRepository;
+) as any;
 
-export const LogRepository: ILogRepository = new HybridRepository<ILogRepository>(
+export const LogRepository = new HybridRepository(
   new SQLiteLogRepository(),
   new FirebaseLogRepository()
-) as unknown as ILogRepository;
+) as any;
 
-export const UserStatsRepository: IUserStatsRepository = new HybridRepository<IUserStatsRepository>(
+export const UserStatsRepository = new HybridRepository(
   new SQLiteUserStatsRepository(),
   new FirebaseUserStatsRepository()
-) as unknown as IUserStatsRepository;
+) as any;
 
-export const UserProfileRepository: IUserProfileRepository = new HybridRepository<IUserProfileRepository>(
-  new SQLiteUserProfileRepository(),
-  new FirebaseUserProfileRepository()
-) as unknown as IUserProfileRepository;
+export const UserProfileRepository = new HybridRepository(
+    new SQLiteUserProfileRepository(),
+    new FirebaseUserProfileRepository()
+) as any;
 
 export const ExerciseRepository = new SQLiteExerciseRepository();
 export const SkillRepository = new SQLiteSkillRepository();

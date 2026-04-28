@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TextInput, Button, ActivityIndicator, Alert, ScrollView } from 'react-native';
-import { UserStatsRepository } from './src/data/repositories';
+import { UserStatsRepository } from './src/data/repositories/syncManager';
 import { UserStats } from './src/domain/entities/User';
 import { AuthService } from './src/application/service/AuthService';
 import { SQLiteClient } from './src/infrastructure/database/SQLiteClient';
