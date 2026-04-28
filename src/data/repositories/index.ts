@@ -1,4 +1,3 @@
-
 import { SQLiteUserStatsRepository } from './sqlite/SQLiteUserStatsRepository';
 import { SQLiteUserProfileRepository } from './sqlite/SQLiteUserProfileRepository';
 import { SQLiteExerciseRepository } from './sqlite/SQLiteExerciseRepository';
@@ -17,10 +16,8 @@ import { ILogRepository } from '../../domain/repositoriesInterface/ILogRepositor
 import { IUserStatsRepository } from '../../domain/repositoriesInterface/IUserStatsRepository';
 import { IUserProfileRepository } from '../../domain/repositoriesInterface/IUserProfileRepository';
 
-
-
 /**
- * HYBRID REPOSITORY
+ * HYBRID REPOSITORY - Gestión inteligente Local + Nube
  */
 class HybridRepository<T> {
   constructor(
@@ -29,12 +26,15 @@ class HybridRepository<T> {
   ) {}
 
   async save(data: any): Promise<void> {
+    // Primero aseguramos el dato en el dispositivo (SQLite)
     await this.local.save(data);
+    
+    // Luego intentamos subirlo a Firebase
     if (this.cloud) {
       try {
         await this.cloud.save(data);
       } catch (e) {
-        console.warn("Cloud Sync: Fallo al guardar, se mantiene local.");
+        console.warn("Cloud Sync (Save): Los datos se guardaron solo localmente.");
       }
     }
   }
@@ -45,32 +45,34 @@ class HybridRepository<T> {
       try {
         await this.cloud.update(data);
       } catch (e) {
-        console.warn("Cloud Sync: Fallo al actualizar.");
+        console.warn("Cloud Sync (Update): Cambio guardado solo en local.");
       }
     }
   }
 
   async delete(id: string): Promise<void> {
-    const localDelete = this.local.delete || this.local.deleteByUserId;
-    await localDelete.call(this.local, id);
+    // Detectamos si el repositorio usa 'delete' o 'deleteByUserId'
+    const localDelete = this.local.delete ? this.local.delete.bind(this.local) : this.local.deleteByUserId.bind(this.local);
+    await localDelete(id);
 
     if (this.cloud) {
       try {
-        const cloudDelete = this.cloud.delete || this.cloud.deleteByUserId;
-        await cloudDelete.call(this.cloud, id);
+        const cloudDelete = this.cloud.delete ? this.cloud.delete.bind(this.cloud) : this.cloud.deleteByUserId.bind(this.cloud);
+        await cloudDelete(id);
       } catch (e) {
-        console.warn("Cloud Sync: Fallo al eliminar en la nube.");
+        console.warn("Cloud Sync (Delete): No se pudo eliminar en la nube.");
       }
     }
   }
 
+  // Métodos de consulta (Siempre prioridad Local para velocidad)
   async findById(id: string) { return await this.local.findById(id); }
   async findByUserId(userId: string) { return await this.local.findByUserId(userId); }
   async findAllByUserId(userId: string) { return await this.local.findAllByUserId(userId); }
   async findInProgressByUserId(userId: string) { return await this.local.findInProgressByUserId(userId); }
 }
 
-// --- INSTANCIAS ÚNICAS (SINGLETONS) ---
+// --- INSTANCIAS (SINGLETONS) ---
 
 export const WorkoutRepository: IWorkoutRepository = new HybridRepository<IWorkoutRepository>(
   new SQLiteWorkoutRepository(),

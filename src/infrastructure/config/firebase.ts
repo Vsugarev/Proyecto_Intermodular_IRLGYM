@@ -1,16 +1,22 @@
-import { initializeApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
-
+import { initializeApp } from "firebase/app";
+import { getFirestore } from "firebase/firestore";
+// @ts-ignore
+import { initializeAuth, getReactNativePersistence } from "firebase/auth"; 
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAi9zlfVpoaRsjOqVnYYhKv6EiPZp8H7VM",
-  authDomain: "irlgym-2beda.firebaseapp.com",
-  projectId: "irlgym-2beda",
-  storageBucket: "irlgym-2beda.firebasestorage.app",
-  messagingSenderId: "87122817884",
-  appId: "1:87122817884:web:712d73535704ab732b4799",
-  measurementId: "G-CY461QC3YQ"
+  apiKey: "AIzaSyCb8f6eL3vISgLQdj_YY8mZCIcmSeArUFw",
+  authDomain: "irlgym-d862e.firebaseapp.com",
+  projectId: "irlgym-d862e",
+  storageBucket: "irlgym-d862e.firebasestorage.app",
+  messagingSenderId: "108584601327",
+  appId: "1:108584601327:web:1352bd18482f2fe0827d1a",
+  measurementId: "G-ZFZJY1P83W"
 };
 
-const app = initializeApp(firebaseConfig);
+export const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
+
+export const auth = initializeAuth(app, {
+  persistence: (getReactNativePersistence as any)(AsyncStorage)
+});
