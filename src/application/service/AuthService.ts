@@ -1,17 +1,24 @@
 import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
-  signOut 
+  signOut,
+  sendPasswordResetEmail
 } from 'firebase/auth';
 import { auth } from '../../infrastructure/config/firebase';
-import { UserProfileRepository, UserStatsRepository } from '../../data/repositories/syncManager';
+import { UserProfileRepository, UserStatsRepository } from '../../data/repositories/index';
 import { UserProfile, UserStats } from '../../domain/entities/User';
 
 export class AuthService {
   
-  static async register(email: string, pass: string, username: string) {
+  static async register(email: string, pass: string, confirmPass: string, username: string) {
+    if (pass !== confirmPass) throw new Error("Las contraseñas no coinciden");
+
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!passwordRegex.test(pass)) {
+      throw new Error("La contraseña debe incluir 1 dígito, una minúscula, una mayúscula y un carácter especial");
+    }
+
     try {
-      console.log("Iniciando registro en Firebase Auth...");
       const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
       const uid = userCredential.user.uid;
 
@@ -23,33 +30,29 @@ export class AuthService {
         streakCount: 0,
         lastWorkoutDate: new Date().toISOString()
       };
-
-      console.log("Intentando guardar Perfil en Local y Nube...");
       await UserProfileRepository.save(newProfile);
-      
-      console.log("Intentando guardar Stats en Local y Nube...");
       await UserStatsRepository.save(newStats);
 
-      console.log("¡Registro completado con éxito!");
       return userCredential.user;
     } catch (error: any) {
-      console.error("ERROR DETALLADO REGISTRO:", error.code, error.message);
       throw this.mapError(error.code);
     }
   }
 
   static async login(email: string, pass: string) {
     try {
-      console.log("Intentando login...");
       const userCredential = await signInWithEmailAndPassword(auth, email, pass);
-      const user = userCredential.user;
-
-      console.log("Login exitoso. Sincronizando datos...");
-      await this.syncUserToLocal(user.uid);
-
-      return user;
+      await this.syncUserToLocal(userCredential.user.uid);
+      return userCredential.user;
     } catch (error: any) {
-      console.error("ERROR DETALLADO LOGIN:", error.code, error.message);
+      throw this.mapError(error.code);
+    }
+  }
+
+  static async resetPassword(email: string) {
+    try {
+      await sendPasswordResetEmail(auth, email);
+    } catch (error: any) {
       throw this.mapError(error.code);
     }
   }
@@ -61,31 +64,21 @@ export class AuthService {
       
       if (cloudProfile) await UserProfileRepository.save(cloudProfile);
       if (cloudStats) await UserStatsRepository.save(cloudStats);
-      
-      console.log("Sincronización inicial completada con éxito.");
     } catch (e) {
-      console.warn("No se pudo sincronizar la data inicial (posiblemente offline).", e);
+      console.warn("Modo offline: se usará la data local existente.");
     }
   }
 
   static async logout() {
-    try {
-      await signOut(auth);
-      console.log("Sesión cerrada");
-    } catch (e) {
-      console.error("Error al cerrar sesión", e);
-    }
+    await signOut(auth);
   }
 
   private static mapError(code: string): string {
     switch (code) {
-      case 'auth/email-already-in-use': return 'Correo ya registrado.';
-      case 'auth/invalid-email': return 'Email no válido.';
-      case 'auth/weak-password': return 'Contraseña muy corta (mínimo 6 caracteres).';
-      case 'auth/user-not-found': 
-      case 'auth/wrong-password': 
+      case 'auth/email-already-in-use': return 'Este correo ya está registrado.';
+      case 'auth/weak-password': return 'La contraseña es demasiado débil.';
       case 'auth/invalid-credential': return 'Email o contraseña incorrectos.';
-      default: return `Error: ${code}. Revisa tu conexión.`;
+      default: return 'Error de conexión. Inténtalo de nuevo.';
     }
   }
 }

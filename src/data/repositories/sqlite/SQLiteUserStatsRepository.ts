@@ -11,6 +11,11 @@ export class SQLiteUserStatsRepository implements IUserStatsRepository {
     );
   }
 
+  async markAsSynced(id: string): Promise<void> {
+    const db = await SQLiteClient.getInstance();
+    await db.runAsync('UPDATE workouts SET sync_status = 0 WHERE id = ?', [id]);
+  }
+
   async findByUserId(userId: string): Promise<UserStats | null> {
     const db = await SQLiteClient.getInstance();
     const row = await db.getFirstAsync<any>(

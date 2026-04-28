@@ -11,12 +11,19 @@ export class SQLiteLogRepository implements ILogRepository {
     );
   }
 
+  async markAsSynced(id: string): Promise<void> {
+    const db = await SQLiteClient.getInstance();
+    await db.runAsync('UPDATE workouts SET sync_status = 0 WHERE id = ?', [id]);
+  }
+
+
   async findById(id: string): Promise<WorkoutLog | null> {
     const db = await SQLiteClient.getInstance();
     const row = await db.getFirstAsync<any>('SELECT * FROM workout_logs WHERE id = ?', [id]);
     if (!row) return null;
     return { ...row, series: JSON.parse(row.series_json) };
   }
+
 
   async findByWorkoutId(workoutId: string): Promise<WorkoutLog[]> {
     const db = await SQLiteClient.getInstance();
