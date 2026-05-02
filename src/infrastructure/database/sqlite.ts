@@ -38,7 +38,7 @@ export const initDatabase = async () => {
       name TEXT,
       date TEXT NOT NULL,
       status TEXT DEFAULT 'in_progress',
-      is_dirty INTEGER DEFAULT 0,
+      sync_status INTEGER DEFAULT 1,
       FOREIGN KEY(userId) REFERENCES profiles(id) ON DELETE CASCADE
     );`,
 

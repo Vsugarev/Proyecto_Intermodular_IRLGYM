@@ -5,6 +5,7 @@ import {
   sendPasswordResetEmail
 } from 'firebase/auth';
 import { auth } from '../../infrastructure/config/firebase';
+// Importamos las instancias híbridas que ya tienen la lógica local + nube
 import { UserProfileRepository, UserStatsRepository } from '../../data/repositories/index';
 import { UserProfile, UserStats } from '../../domain/entities/User';
 
@@ -22,7 +23,12 @@ export class AuthService {
       const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
       const uid = userCredential.user.uid;
 
-      const newProfile: UserProfile = { id: uid, username, avatarUrl: '' };
+      const newProfile: UserProfile = { 
+        id: uid, 
+        username, 
+        avatarUrl: '' 
+      };
+      
       const newStats: UserStats = {
         userId: uid,
         currentXp: 0,
@@ -30,22 +36,24 @@ export class AuthService {
         streakCount: 0,
         lastWorkoutDate: new Date().toISOString()
       };
+
       await UserProfileRepository.save(newProfile);
       await UserStatsRepository.save(newStats);
 
       return userCredential.user;
     } catch (error: any) {
-      throw this.mapError(error.code);
+      throw new Error(this.mapError(error.code));
     }
   }
 
   static async login(email: string, pass: string) {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, pass);
+      // Intentamos traer la data de la nube al local al iniciar sesión
       await this.syncUserToLocal(userCredential.user.uid);
       return userCredential.user;
     } catch (error: any) {
-      throw this.mapError(error.code);
+      throw new Error(this.mapError(error.code));
     }
   }
 
@@ -53,24 +61,29 @@ export class AuthService {
     try {
       await sendPasswordResetEmail(auth, email);
     } catch (error: any) {
-      throw this.mapError(error.code);
+      throw new Error(this.mapError(error.code));
     }
   }
 
   private static async syncUserToLocal(uid: string) {
     try {
       const cloudProfile = await UserProfileRepository.findById(uid);
-      const cloudStats = await UserStatsRepository.findByUserId(uid);
+      
+      const cloudStats = await UserStatsRepository.findAllByUserId(uid);
       
       if (cloudProfile) await UserProfileRepository.save(cloudProfile);
       if (cloudStats) await UserStatsRepository.save(cloudStats);
     } catch (e) {
-      console.warn("Modo offline: se usará la data local existente.");
+      console.warn("Modo offline o error de sincronización inicial.");
     }
   }
 
   static async logout() {
-    await signOut(auth);
+    try {
+      await signOut(auth);
+    } catch (error: any) {
+      throw new Error("Error al cerrar sesión");
+    }
   }
 
   private static mapError(code: string): string {
@@ -78,7 +91,9 @@ export class AuthService {
       case 'auth/email-already-in-use': return 'Este correo ya está registrado.';
       case 'auth/weak-password': return 'La contraseña es demasiado débil.';
       case 'auth/invalid-credential': return 'Email o contraseña incorrectos.';
-      default: return 'Error de conexión. Inténtalo de nuevo.';
+      case 'auth/user-not-found': return 'No existe una cuenta con este email.';
+      case 'auth/wrong-password': return 'Contraseña incorrecta.';
+      default: return 'Error de autenticación. Inténtalo de nuevo.';
     }
   }
 }
