@@ -12,7 +12,6 @@ import { FirebaseUserStatsRepository } from './firebase/FirebaseUserStatsReposit
 import { FirebaseUserProfileRepository } from './firebase/FirebaseUserProfileRepository';
 
 class HybridRepository {
-
   constructor(private local: any, private cloud: any) {}
 
   async save(data: any) {
@@ -42,6 +41,15 @@ class HybridRepository {
       await this.cloud.delete(id);
     } catch (e) {
       console.log("Error cloud delete");
+    }
+  }
+
+  async deleteByWorkoutId(workoutId: string) {
+    await this.local.deleteByWorkoutId(workoutId);
+    try {
+      await this.cloud.deleteByWorkoutId(workoutId);
+    } catch (e) {
+      console.log("Error cloud deleteByWorkoutId");
     }
   }
 

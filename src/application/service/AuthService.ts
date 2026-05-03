@@ -5,7 +5,6 @@ import {
   sendPasswordResetEmail
 } from 'firebase/auth';
 import { auth } from '../../infrastructure/config/firebase';
-// Importamos las instancias híbridas que ya tienen la lógica local + nube
 import { UserProfileRepository, UserStatsRepository } from '../../data/repositories/index';
 import { UserProfile, UserStats } from '../../domain/entities/User';
 
@@ -49,7 +48,6 @@ export class AuthService {
   static async login(email: string, pass: string) {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, pass);
-      // Intentamos traer la data de la nube al local al iniciar sesión
       await this.syncUserToLocal(userCredential.user.uid);
       return userCredential.user;
     } catch (error: any) {
