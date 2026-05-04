@@ -6,11 +6,18 @@ export const ExerciseService = {
     return await ExerciseRepository.findAll(); 
   },
 
-  async searchExercises(query: string, category?: string) {
+  async searchExercises(query: string, category: string = 'Todos') {
     const all = await this.getAll();
     return all.filter(ex => {
       const matchesQuery = ex.name.toLowerCase().includes(query.toLowerCase());
-      const matchesCategory = category ? ex.category === category : true;
+      
+      let matchesCategory = true;
+      if (category === 'Favoritos') {
+        matchesCategory = ex.isFavorite;
+      } else if (category !== 'Todos') {
+        matchesCategory = ex.category === category;
+      }
+      
       return matchesQuery && matchesCategory;
     });
   },

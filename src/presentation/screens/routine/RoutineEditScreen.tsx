@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, FlatList } from 'react-native';
 import { WorkoutService } from '../../../application/service/WorkoutService';
 import { LogService } from '../../../application/service/LogService';
+import { ExerciseService } from '../../../application/service/ExerciseService';
 
 export const RoutineEditScreen = ({ route, navigation }: any) => {
-  const { routine } = route.params || {}; 
+  const { routine } = route.params || {};
   const [name, setName] = useState(routine?.name || '');
   const [exercises, setExercises] = useState<any[]>([]);
 
@@ -14,8 +15,13 @@ export const RoutineEditScreen = ({ route, navigation }: any) => {
 
   const loadExercises = async () => {
     try {
-      const data = await LogService.getLogsByWorkout(routine.id);
-      setExercises(data);
+      const logs = await LogService.getLogsByWorkout(routine.id);
+      // Para cada log, buscamos su nombre de ejercicio para mostrarlo
+      const logsWithNames = await Promise.all(logs.map(async (log) => {
+        const exercise = await ExerciseService.getExerciseById(log.exerciseId);
+        return { ...log, exerciseName: exercise?.name || 'Ejercicio desconocido' };
+      }));
+      setExercises(logsWithNames);
     } catch (e) {
       console.error(e);
     }
@@ -24,20 +30,29 @@ export const RoutineEditScreen = ({ route, navigation }: any) => {
   const handleUpdate = async () => {
     try {
       await WorkoutService.updateWorkout({ ...routine, name });
+
+      const { LogRepository } = require('../../../data/repositories/index');
+      for (const log of exercises) {
+        await LogRepository.save(log);
+      }
+
       Alert.alert("Éxito", "Cambios guardados");
       navigation.goBack();
     } catch (e: any) {
-      Alert.alert("Error", "No se pudo guardar");
+      console.error(e);
+      Alert.alert("Error", "No se pudo guardar los cambios");
     }
   };
 
   const handleDelete = () => {
     Alert.alert("Eliminar", "¿Borrar esta rutina?", [
       { text: "Cancelar", style: "cancel" },
-      { text: "Borrar", style: "destructive", onPress: async () => {
+      {
+        text: "Borrar", style: "destructive", onPress: async () => {
           await WorkoutService.deleteWorkout(routine.id);
           navigation.goBack();
-      }}
+        }
+      }
     ]);
   };
 
@@ -75,7 +90,7 @@ export const RoutineEditScreen = ({ route, navigation }: any) => {
         <TouchableOpacity onPress={() => moveItem(index, 'up')}><Text style={styles.orderText}>▲</Text></TouchableOpacity>
         <TouchableOpacity onPress={() => moveItem(index, 'down')}><Text style={styles.orderText}>▼</Text></TouchableOpacity>
       </View>
-      <TouchableOpacity 
+      <TouchableOpacity
         onPress={() => navigation.navigate('EditSeries', { log: item })}
         style={styles.editSetsBtn}
       >

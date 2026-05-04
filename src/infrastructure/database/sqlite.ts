@@ -29,6 +29,9 @@ export const initDatabase = async () => {
       name TEXT NOT NULL,
       category TEXT,
       branch TEXT NOT NULL,
+      muscle_group TEXT,
+      description TEXT,
+      image_url TEXT,
       is_custom INTEGER DEFAULT 0,
       is_favorite INTEGER DEFAULT 0
     );`,
@@ -78,4 +81,24 @@ export const initDatabase = async () => {
   for (const table of tables) {
     await db.execAsync(table);
   }
-};
+
+  // Seed de ejercicios si está vacía
+  const exerciseCount = await db.getFirstAsync<{count: number}>('SELECT COUNT(*) as count FROM library_exercises');
+  if (exerciseCount?.count === 0) {
+    console.log("Sembrando base de datos con ejercicios iniciales...");
+    const initialExercises = [
+      ['ex_1', 'Press de Banca', 'Pecho', 'base', 'Pecho', 'Acuéstate en un banco plano y empuja la barra hacia arriba.', 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHYyeGNuM3Z4Z3Z4Z3Z4Z3Z4Z3Z4Z3Z4Z3Z4Z3Z4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKL9bV6X2e2I1G0/giphy.gif'],
+      ['ex_2', 'Sentadilla con Barra', 'Pierna', 'base', 'Cuádriceps', 'Baja la cadera manteniendo la espalda recta.', null],
+      ['ex_3', 'Peso Muerto', 'Espalda', 'base', 'Posteriores', 'Levanta la barra desde el suelo manteniendo la espalda neutra.', null],
+      ['ex_4', 'Press Militar', 'Hombro', 'base', 'Hombro', 'Empuja la barra sobre tu cabeza desde los hombros.', null],
+      ['ex_5', 'Dominadas', 'Espalda', 'calisthenics', 'Dorsales', 'Levanta tu propio peso hasta que la barbilla pase la barra.', null]
+    ];
+
+    for (const ex of initialExercises) {
+      await db.runAsync(
+        'INSERT INTO library_exercises (id, name, category, branch, muscle_group, description, image_url) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        ex
+      );
+    }
+  }
+};

@@ -10,6 +10,7 @@ import { ProfileScreen } from '../screens/profile/ProfileScreen';
 import { RoutineEditScreen } from '../screens/routine/RoutineEditScreen';
 import { ExerciseLibraryScreen } from '../screens/routine/ExerciseLibraryScreen';
 import { ExerciseCreateScreen } from '../screens/routine/ExerciseCreateScreen';
+import { ExerciseDetailScreen } from '../screens/routine/ExerciseDetailScreen';
 import { AuthScreen } from '../screens/auth/AuthScreen';
 
 const Tab = createBottomTabNavigator();
@@ -21,8 +22,8 @@ const HomeStack = () => {
       <Stack.Screen name="HomeMain" component={HomeScreen} options={{ headerShown: false }} />
       <Stack.Screen name="EditRoutine" component={RoutineEditScreen} options={{ title: 'Editar Rutina' }} />
       <Stack.Screen name="ExerciseLibrary" component={ExerciseLibraryScreen} options={{ title: 'Biblioteca' }} />
-      {/* Nueva pantalla de creación */}
       <Stack.Screen name="ExerciseCreate" component={ExerciseCreateScreen} options={{ title: 'Nuevo Ejercicio' }} />
+      <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={{ title: 'Detalle de Ejercicio' }} />
     </Stack.Navigator>
   );
 };

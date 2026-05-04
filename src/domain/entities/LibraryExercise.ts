@@ -5,6 +5,9 @@ export interface LibraryExercise {
   name: string;
   category: string; 
   branch: TrainingBranch;
+  muscleGroup?: string;
+  description?: string;
+  imageUrl?: string;
   isCustom: boolean;
   isFavorite: boolean;
 }
