@@ -65,6 +65,9 @@ export const LogRepository = new HybridRepository(new SQLiteLogRepository(), new
 export const UserStatsRepository = new HybridRepository(new SQLiteUserStatsRepository(), new FirebaseUserStatsRepository());
 export const UserProfileRepository = new HybridRepository(new SQLiteUserProfileRepository(), new FirebaseUserProfileRepository());
 
+export const CloudUserProfileRepository = new FirebaseUserProfileRepository();
+export const CloudUserStatsRepository = new FirebaseUserStatsRepository();
+
 export const ExerciseRepository = new SQLiteExerciseRepository();
 export const SkillRepository = new SQLiteSkillRepository();
 export const ProgressRepository = new SQLiteProgressRepository();

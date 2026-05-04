@@ -51,4 +51,12 @@ export class SQLiteExerciseRepository implements IExerciseRepository {
     const db = await SQLiteClient.getInstance();
     await db.runAsync('DELETE FROM library_exercises WHERE id = ?', [id]);
   }
+
+  async updateFavorite(id: string, isFavorite: number) {
+    const db = await SQLiteClient.getInstance();
+    await db.runAsync(
+      'UPDATE library_exercises SET is_favorite = ? WHERE id = ?',
+      [isFavorite, id]
+    );
+  }
 }

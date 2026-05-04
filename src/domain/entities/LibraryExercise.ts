@@ -6,4 +6,5 @@ export interface LibraryExercise {
   category: string; 
   branch: TrainingBranch;
   isCustom: boolean;
+  isFavorite: boolean;
 }

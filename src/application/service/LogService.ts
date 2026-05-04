@@ -14,6 +14,13 @@ export const LogService = {
     return await LogRepository.findByWorkoutId(workoutId);
   },
 
+  async updateSeries(logId: string, newSeries: Set[]) {
+    const log = await LogRepository.findById(logId);
+    if (log) {
+      await LogRepository.update({ ...log, series: newSeries });
+    }
+  },
+
   async updateLog(log: WorkoutLog) {
     await LogRepository.update(log);
   },

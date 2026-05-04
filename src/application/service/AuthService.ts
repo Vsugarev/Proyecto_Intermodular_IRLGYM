@@ -63,16 +63,26 @@ export class AuthService {
     }
   }
 
-  private static async syncUserToLocal(uid: string) {
+  static async syncUserToLocal(uid: string) {
     try {
-      const cloudProfile = await UserProfileRepository.findById(uid);
+      // Importación dinámica o uso de los exportados para evitar ciclos si los hubiera
+      const { CloudUserProfileRepository, CloudUserStatsRepository } = require('../../data/repositories/index');
       
-      const cloudStats = await UserStatsRepository.findAllByUserId(uid);
+      const cloudProfile = await CloudUserProfileRepository.findById(uid);
+      const cloudStats = await CloudUserStatsRepository.findByUserId(uid);
       
-      if (cloudProfile) await UserProfileRepository.save(cloudProfile);
-      if (cloudStats) await UserStatsRepository.save(cloudStats);
+      if (cloudProfile) {
+        await UserProfileRepository.save(cloudProfile);
+      } else {
+        // Si no hay perfil en la nube (ej. primer login tras registro incompleto), creamos uno básico
+        await UserProfileRepository.save({ id: uid, username: 'Guerrero', avatarUrl: '' });
+      }
+
+      if (cloudStats) {
+        await UserStatsRepository.save(cloudStats);
+      }
     } catch (e) {
-      console.warn("Modo offline o error de sincronización inicial.");
+      console.warn("Error de sincronización inicial:", e);
     }
   }
 

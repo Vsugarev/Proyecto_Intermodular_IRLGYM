@@ -8,7 +8,6 @@ export const HomeScreen = ({ navigation }: any) => {
   const [workouts, setWorkouts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Recargar rutinas cada vez que la pantalla gana el foco
   useFocusEffect(
     useCallback(() => {
       const user = auth.currentUser;
@@ -24,22 +23,25 @@ export const HomeScreen = ({ navigation }: any) => {
     if (!uid) return;
     try {
       setLoading(true);
-      const data = await WorkoutService.getUserWorkouts(uid);
+      const data = await WorkoutService.getWorkoutsByUser(uid);
       setWorkouts(data);
     } catch (e) {
-      console.error("Error cargando rutinas:", e);
+      console.error(e);
     } finally {
       setLoading(false);
     }
   };
 
   const handleCreateNew = async () => {
+    const user = auth.currentUser;
+    if (!user) {
+      Alert.alert("Error", "Debes estar identificado");
+      return;
+    }
+
     try {
       const defaultName = "Nueva Rutina " + new Date().toLocaleDateString();
-      // Llamada limpia al servicio coordinado
-      const newRoutine = await WorkoutService.createWorkout(defaultName); 
-      
-      // Navegamos a la pantalla de edición pasándole el objeto real[cite: 5]
+      const newRoutine = await WorkoutService.startWorkout(user.uid, defaultName);
       navigation.navigate('EditRoutine', { routine: newRoutine });
     } catch (e: any) {
       Alert.alert("Error", e.message || "No se pudo crear la rutina");

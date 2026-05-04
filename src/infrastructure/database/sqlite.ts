@@ -1,14 +1,14 @@
-import * as SQLite from 'expo-sqlite';
+import { SQLiteClient } from './SQLiteClient';
 
 export const initDatabase = async () => {
-  const db = await SQLite.openDatabaseAsync('gym_rpg.db');
+  const db = await SQLiteClient.getInstance();
 
   await db.execAsync('PRAGMA foreign_keys = ON;');
 
   const tables = [
     `CREATE TABLE IF NOT EXISTS profiles (
       id TEXT PRIMARY KEY NOT NULL,
-      username TEXT,
+      username TEXT NOT NULL,
       avatar_url TEXT,
       sync_status INTEGER DEFAULT 0,
       updated_at INTEGER
@@ -28,14 +28,15 @@ export const initDatabase = async () => {
       id TEXT PRIMARY KEY NOT NULL,
       name TEXT NOT NULL,
       category TEXT,
-      branch TEXT,
-      is_custom INTEGER DEFAULT 0
+      branch TEXT NOT NULL,
+      is_custom INTEGER DEFAULT 0,
+      is_favorite INTEGER DEFAULT 0
     );`,
 
     `CREATE TABLE IF NOT EXISTS workouts (
       id TEXT PRIMARY KEY NOT NULL,
       userId TEXT NOT NULL,
-      name TEXT,
+      name TEXT NOT NULL,
       date TEXT NOT NULL,
       status TEXT DEFAULT 'in_progress',
       sync_status INTEGER DEFAULT 1,
@@ -46,7 +47,7 @@ export const initDatabase = async () => {
       id TEXT PRIMARY KEY NOT NULL,
       workoutId TEXT NOT NULL,
       exerciseId TEXT NOT NULL,
-      series_json TEXT NOT NULL, -- IMPORTANTE: Asegúrate que el repo use 'series_json'
+      series_json TEXT NOT NULL,
       note TEXT,
       sync_status INTEGER DEFAULT 0,
       FOREIGN KEY(workoutId) REFERENCES workouts(id) ON DELETE CASCADE,
@@ -56,10 +57,10 @@ export const initDatabase = async () => {
     `CREATE TABLE IF NOT EXISTS skill_nodes (
       id TEXT PRIMARY KEY NOT NULL,
       title TEXT NOT NULL,
-      branch TEXT,
+      branch TEXT NOT NULL, 
       requirements_json TEXT,
       prev_node_id TEXT,
-      xp_reward INTEGER
+      xp_reward INTEGER DEFAULT 0
     );`,
 
     `CREATE TABLE IF NOT EXISTS user_progress_nodes (
@@ -77,4 +78,4 @@ export const initDatabase = async () => {
   for (const table of tables) {
     await db.execAsync(table);
   }
-};
+};

@@ -21,12 +21,16 @@ export const WorkoutService = {
     return await WorkoutRepository.findAllByUserId(userId);
   },
 
+  async updateWorkout(workout: Workout) {
+    await WorkoutRepository.update(workout);
+  },
+
   async finishWorkout(workout: Workout) {
     await WorkoutRepository.update({ ...workout, status: 'completed' });
   },
 
   async deleteWorkout(id: string) {
     await WorkoutRepository.delete(id);
-    await LogRepository.deleteByWorkoutId(id); // Borrado en cascada manual
+    await LogRepository.deleteByWorkoutId(id);
   }
 };
