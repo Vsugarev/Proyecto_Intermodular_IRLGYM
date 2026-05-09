@@ -45,6 +45,31 @@ export const WorkoutService = {
     return null;
   },
 
+  async getWorkoutWithDetails(id: string) {
+    const workout = await this.getWorkoutById(id);
+    if (!workout) return null;
+
+    const logs = workout.logs || [];
+    const exercises = await Promise.all(
+      logs.map(async (log) => {
+        const { ExerciseRepository } = require('../../data/repositories/index');
+        const ex = await ExerciseRepository.findById(log.exerciseId);
+        return { ...log, exerciseName: ex?.name || 'Ejercicio eliminado' };
+      })
+    );
+
+    const allWorkouts = await this.getWorkoutsByUser(workout.userId);
+    const history = allWorkouts
+      .filter((w: Workout) => w.name === workout.name && !w.isTemplate && w.status === 'completed')
+      .sort((a: Workout, b: Workout) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    return {
+      workout,
+      exercises,
+      lastDate: history.length > 0 ? history[0].date : null
+    };
+  },
+
   async updateWorkout(workout: Workout) {
     await WorkoutRepository.update(workout);
   },

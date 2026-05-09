@@ -13,7 +13,7 @@ interface ExerciseWithLog extends WorkoutLog {
 
 const SET_TYPES: Set['type'][] = ['R', 'W', 'D', 'F'];
 
-export const RoutineEditScreen = ({ route, navigation }: any) => {
+export const RoutineEditScreen = ({ route, navigation }: { route: any, navigation: any }) => {
   const { routine } = route.params || {};
   const [name, setName] = useState(routine?.name || '');
   const [exercises, setExercises] = useState<ExerciseWithLog[]>([]);
@@ -34,7 +34,7 @@ export const RoutineEditScreen = ({ route, navigation }: any) => {
           ...log, 
           exerciseName: exercise?.name || 'Ejercicio desconocido',
           previousSeries: lastLog?.series
-        };
+        } as ExerciseWithLog;
       }));
       setExercises(logsWithDetails);
       

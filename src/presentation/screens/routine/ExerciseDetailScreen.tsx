@@ -6,20 +6,21 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { ExerciseService } from '../../../application/service/ExerciseService';
-import { WorkoutService } from '../../../application/service/WorkoutService';
-import { LogRepository } from '../../../data/repositories/index';
 import { LibraryExercise } from '../../../domain/entities/LibraryExercise';
 import { WorkoutLog, Set } from '../../../domain/entities/Workout';
 
 interface HistoryLog extends WorkoutLog {
   workoutName?: string;
   workoutDate?: string;
+  isTemplate?: boolean;
+  status?: string;
 }
 
-export const ExerciseDetailScreen = ({ route, navigation }: any) => {
+export const ExerciseDetailScreen = ({ route, navigation }: { route: any, navigation: any }) => {
   const { exerciseId } = route.params || {};
   const [exercise, setExercise] = useState<LibraryExercise | null>(null);
   const [history, setHistory] = useState<HistoryLog[]>([]);
+  const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -72,29 +73,13 @@ export const ExerciseDetailScreen = ({ route, navigation }: any) => {
 
   const loadData = async () => {
     try {
-      const exData = await ExerciseService.getExerciseById(exerciseId);
-      const logs = await LogRepository.findByExerciseId(exerciseId);
-      
-      const logsWithWorkoutInfo = await Promise.all(logs.map(async (log: WorkoutLog) => {
-        const workout = await WorkoutService.getWorkoutById(log.workoutId);
-        return {
-          ...log,
-          workoutName: workout?.name || 'Entrenamiento',
-          workoutDate: workout?.date,
-          isTemplate: workout?.isTemplate,
-          status: workout?.status
-        };
-      }));
-
-      // Filtramos: Solo sesiones finalizadas, NO plantillas (Hevy style)
-      const filteredHistory = logsWithWorkoutInfo.filter(l => !l.isTemplate && l.status === 'completed');
-
-      setExercise(exData);
-      setHistory(filteredHistory.sort((a, b) => {
-        const dateA = a.workoutDate ? new Date(a.workoutDate).getTime() : 0;
-        const dateB = b.workoutDate ? new Date(b.workoutDate).getTime() : 0;
-        return dateB - dateA;
-      }));
+      setLoading(true);
+      const data = await ExerciseService.getExerciseWithStats(exerciseId);
+      if (data) {
+        setExercise(data.exercise);
+        setHistory(data.history);
+        setStats(data.stats);
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -104,24 +89,6 @@ export const ExerciseDetailScreen = ({ route, navigation }: any) => {
 
   if (loading) return <ActivityIndicator style={{ flex: 1 }} color="#28a745" />;
   if (!exercise) return <Text>Ejercicio no encontrado</Text>;
-
-  const maxWeight = history.reduce((max, log: WorkoutLog) => {
-    const logMax = log.series.length > 0 ? Math.max(...log.series.map((s: Set) => s.kg || 0)) : 0;
-    return Math.max(max, logMax);
-  }, 0);
-
-  const estimated1RM = history.reduce((max, log: WorkoutLog) => {
-    const logMax1RM = log.series.length > 0 ? Math.max(...log.series.map((s: Set) => {
-      if (s.reps > 1) return s.kg * (1 + 0.0333 * s.reps);
-      return s.kg;
-    })) : 0;
-    return Math.max(max, logMax1RM);
-  }, 0);
-
-  const maxVolume = history.reduce((max, log: WorkoutLog) => {
-    const logVolume = log.series.reduce((sum, s: Set) => sum + (s.kg * s.reps), 0);
-    return Math.max(max, logVolume);
-  }, 0);
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -160,19 +127,19 @@ export const ExerciseDetailScreen = ({ route, navigation }: any) => {
       <View style={styles.statsGrid}>
         <View style={styles.statCard}>
           <Text style={styles.statLabel}>Max Peso</Text>
-          <Text style={styles.statValue}>{maxWeight.toFixed(1)} <Text style={styles.unit}>kg</Text></Text>
+          <Text style={styles.statValue}>{stats?.maxWeight?.toFixed(1) || '0.0'} <Text style={styles.unit}>kg</Text></Text>
         </View>
         <View style={styles.statCard}>
           <Text style={styles.statLabel}>Est. 1RM</Text>
-          <Text style={styles.statValue}>{estimated1RM.toFixed(1)} <Text style={styles.unit}>kg</Text></Text>
+          <Text style={styles.statValue}>{stats?.estimated1RM?.toFixed(1) || '0.0'} <Text style={styles.unit}>kg</Text></Text>
         </View>
         <View style={styles.statCard}>
           <Text style={styles.statLabel}>Max Volumen</Text>
-          <Text style={styles.statValue}>{maxVolume.toFixed(0)} <Text style={styles.unit}>kg</Text></Text>
+          <Text style={styles.statValue}>{stats?.maxVolume?.toFixed(0) || '0'} <Text style={styles.unit}>kg</Text></Text>
         </View>
         <View style={styles.statCard}>
           <Text style={styles.statLabel}>Total Series</Text>
-          <Text style={styles.statValue}>{history.reduce((acc, log) => acc + log.series.length, 0)}</Text>
+          <Text style={styles.statValue}>{stats?.totalSeries || 0}</Text>
         </View>
       </View>
 

@@ -4,36 +4,27 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { WorkoutService } from '../../../application/service/WorkoutService';
 import { ExerciseService } from '../../../application/service/ExerciseService';
+import { Workout, WorkoutLog } from '../../../domain/entities/Workout';
+
+interface ExerciseWithDetail extends WorkoutLog {
+  exerciseName: string;
+}
 
 export const RoutineDetailScreen = ({ route, navigation }: any) => {
   const { routineId } = route.params;
-  const [routine, setRoutine] = useState<any>(null);
-  const [exercises, setExercises] = useState<any[]>([]);
+  const [routine, setRoutine] = useState<Workout | null>(null);
+  const [exercises, setExercises] = useState<ExerciseWithDetail[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastDate, setLastDate] = useState<string | null>(null);
 
   const loadData = async () => {
     try {
       setLoading(true);
-      const data = await WorkoutService.getWorkoutById(routineId);
+      const data = await WorkoutService.getWorkoutWithDetails(routineId);
       if (data) {
-        setRoutine(data);
-        const exList = data.logs ? await Promise.all(
-          data.logs.map(async (log: any) => {
-            const ex = await ExerciseService.getExerciseById(log.exerciseId);
-            return { ...log, exerciseName: ex?.name || 'Ejercicio eliminado' };
-          })
-        ) : [];
-        setExercises(exList);
-
-        const allWorkouts = await WorkoutService.getWorkoutsByUser(data.userId);
-        const history = allWorkouts
-          .filter(w => w.name === data.name && !w.isTemplate && w.status === 'completed')
-          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-        if (history.length > 0) {
-          setLastDate(history[0].date);
-        }
+        setRoutine(data.workout);
+        setExercises(data.exercises);
+        setLastDate(data.lastDate);
       }
     } catch (e) {
       console.error(e);
@@ -104,6 +95,7 @@ export const RoutineDetailScreen = ({ route, navigation }: any) => {
       <TouchableOpacity 
         style={styles.startBtn}
         onPress={async () => {
+          if (!routine) return;
           const session = await WorkoutService.duplicateRoutine(routineId, routine.userId);
           navigation.navigate('EditRoutine', { routine: session });
         }}

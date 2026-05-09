@@ -4,9 +4,10 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { WorkoutService } from '../../../application/service/WorkoutService';
 import { auth } from '../../../infrastructure/config/firebase';
+import { Workout } from '../../../domain/entities/Workout';
 
-export const HomeScreen = ({ navigation }: any) => {
-  const [templates, setTemplates] = useState<any[]>([]);
+export const HomeScreen = ({ navigation }: { navigation: any }) => {
+  const [templates, setTemplates] = useState<Workout[]>([]);
   const [loading, setLoading] = useState(true);
 
   useFocusEffect(
@@ -25,7 +26,7 @@ export const HomeScreen = ({ navigation }: any) => {
     try {
       setLoading(true);
       const data = await WorkoutService.getWorkoutsByUser(uid);
-      setTemplates(data.filter(w => w.isTemplate));
+      setTemplates(data.filter((w: Workout) => w.isTemplate));
     } catch (e) {
       console.error(e);
     } finally {
@@ -61,7 +62,7 @@ export const HomeScreen = ({ navigation }: any) => {
     }
   };
 
-  const renderRoutineItem = ({ item }: any) => (
+  const renderRoutineItem = ({ item }: { item: Workout }) => (
     <View style={styles.routineCard}>
       <TouchableOpacity 
         style={styles.routineInfo} 
