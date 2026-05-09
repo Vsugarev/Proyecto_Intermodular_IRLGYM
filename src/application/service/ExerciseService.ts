@@ -2,11 +2,11 @@ import { ExerciseRepository } from '../../data/repositories/index';
 import { LibraryExercise } from '../../domain/entities/LibraryExercise';
 
 export const ExerciseService = {
-  async getAll() {
+  async getAll(): Promise<LibraryExercise[]> {
     return await ExerciseRepository.findAll(); 
   },
 
-  async searchExercises(query: string, category: string = 'Todos') {
+  async searchExercises(query: string, category: string = 'Todos'): Promise<LibraryExercise[]> {
     const all = await this.getAll();
     return all.filter(ex => {
       const matchesQuery = ex.name.toLowerCase().includes(query.toLowerCase());
@@ -22,7 +22,7 @@ export const ExerciseService = {
     });
   },
 
-  async getExerciseById(id: string) {
+  async getExerciseById(id: string): Promise<LibraryExercise | null> {
     return await ExerciseRepository.findById(id);
   },
 

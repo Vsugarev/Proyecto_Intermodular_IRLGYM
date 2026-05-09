@@ -58,6 +58,7 @@ class HybridRepository {
   async findAllByUserId(userId: string) { return await this.local.findAllByUserId(userId); }
   async findInProgressByUserId(userId: string) { return await this.local.findInProgressByUserId(userId); }
   async findByWorkoutId(workoutId: string) { return await this.local.findByWorkoutId(workoutId); }
+  async findByExerciseId(exerciseId: string) { return await this.local.findByExerciseId(exerciseId); }
 }
 
 export const WorkoutRepository = new HybridRepository(new SQLiteWorkoutRepository(), new FirebaseWorkoutRepository());

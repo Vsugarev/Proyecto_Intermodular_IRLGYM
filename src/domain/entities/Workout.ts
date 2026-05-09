@@ -2,6 +2,7 @@ export interface Set {
   kg: number;
   reps: number;
   type: 'R' | 'W' | 'D' | 'F'; 
+  rpe?: number;
 }
 
 export interface WorkoutLog {

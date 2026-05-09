@@ -10,7 +10,7 @@ export const LogService = {
     return log;
   },
 
-  async getLogsByWorkout(workoutId: string) {
+  async getLogsByWorkout(workoutId: string): Promise<WorkoutLog[]> {
     return await LogRepository.findByWorkoutId(workoutId);
   },
 
@@ -23,6 +23,10 @@ export const LogService = {
 
   async updateLog(log: WorkoutLog) {
     await LogRepository.update(log);
+  },
+
+  async saveLog(log: WorkoutLog) {
+    await LogRepository.save(log);
   },
 
   async deleteLog(logId: string) {

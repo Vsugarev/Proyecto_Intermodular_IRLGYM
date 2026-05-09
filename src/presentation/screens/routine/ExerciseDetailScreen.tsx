@@ -7,10 +7,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { ExerciseService } from '../../../application/service/ExerciseService';
 import { LogRepository } from '../../../data/repositories/index';
 import { LibraryExercise } from '../../../domain/entities/LibraryExercise';
-import { WorkoutLog } from '../../../domain/entities/Workout';
+import { WorkoutLog, Set } from '../../../domain/entities/Workout';
 
 export const ExerciseDetailScreen = ({ route, navigation }: any) => {
-  const { exerciseId } = route.params;
+  const { exerciseId } = route.params || {};
   const [exercise, setExercise] = useState<LibraryExercise | null>(null);
   const [history, setHistory] = useState<WorkoutLog[]>([]);
   const [loading, setLoading] = useState(true);
@@ -24,7 +24,11 @@ export const ExerciseDetailScreen = ({ route, navigation }: any) => {
       const exData = await ExerciseService.getExerciseById(exerciseId);
       const histData = await LogRepository.findByExerciseId(exerciseId);
       setExercise(exData);
-      setHistory(histData.sort((a, b) => new Date(b.id).getTime() - new Date(a.id).getTime())); // Asumiendo ID tiene tiempo o hay fecha
+      setHistory(histData.sort((a: WorkoutLog, b: WorkoutLog) => {
+        const timeA = parseInt(a.id.replace('log_', '')) || 0;
+        const timeB = parseInt(b.id.replace('log_', '')) || 0;
+        return timeB - timeA;
+      }));
     } catch (e) {
       console.error(e);
     } finally {
@@ -35,8 +39,8 @@ export const ExerciseDetailScreen = ({ route, navigation }: any) => {
   if (loading) return <ActivityIndicator style={{ flex: 1 }} color="#28a745" />;
   if (!exercise) return <Text>Ejercicio no encontrado</Text>;
 
-  const bestWeight = history.reduce((max, log) => {
-    const logMax = Math.max(...log.series.map(s => s.weight || 0));
+  const bestWeight = history.reduce((max, log: WorkoutLog) => {
+    const logMax = log.series.length > 0 ? Math.max(...log.series.map((s: Set) => s.kg || 0)) : 0;
     return Math.max(max, logMax);
   }, 0);
 
@@ -78,9 +82,9 @@ export const ExerciseDetailScreen = ({ route, navigation }: any) => {
           history.map((log, index) => (
             <View key={log.id} style={styles.historyCard}>
               <Text style={styles.historyDate}>Registro #{history.length - index}</Text>
-              {log.series.map((s, i) => (
+              {log.series.map((s: Set, i) => (
                 <Text key={i} style={styles.seriesText}>
-                  Serie {i + 1}: {s.reps} reps x {s.weight} kg
+                  Serie {i + 1}: {s.reps} reps x {s.kg} kg
                 </Text>
               ))}
             </View>
