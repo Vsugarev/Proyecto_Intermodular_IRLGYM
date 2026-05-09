@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { ExerciseService } from '../../../application/service/ExerciseService';
 
 export const ExerciseLibraryScreen = ({ route, navigation }: any) => {
@@ -49,6 +50,13 @@ export const ExerciseLibraryScreen = ({ route, navigation }: any) => {
           <Text style={styles.exerciseName}>{item.name}</Text>
           <Text style={styles.exerciseSub}>{item.category} • {item.branch}</Text>
         </View>
+      </TouchableOpacity>
+
+      <TouchableOpacity 
+        onPress={() => navigation.navigate('ExerciseDetail', { exerciseId: item.id })} 
+        style={styles.infoButton}
+      >
+        <Ionicons name="information-circle-outline" size={22} color="#8e8e93" />
       </TouchableOpacity>
 
       <TouchableOpacity onPress={() => handleToggleFavorite(item)} style={styles.favButton}>
@@ -147,5 +155,6 @@ const styles = StyleSheet.create({
   favButton: { padding: 10 },
   favIcon: { fontSize: 22, color: '#ccc' },
   favActive: { color: '#ffc107' },
+  infoButton: { padding: 10 },
   emptyText: { textAlign: 'center', marginTop: 50, color: '#999' }
 });

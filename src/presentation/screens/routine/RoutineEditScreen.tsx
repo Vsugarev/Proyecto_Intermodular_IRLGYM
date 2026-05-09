@@ -200,9 +200,12 @@ export const RoutineEditScreen = ({ route, navigation }: any) => {
   const renderExerciseItem = ({ item, index }: { item: ExerciseWithLog, index: number }) => (
     <View style={styles.exerciseCard}>
       <View style={styles.exerciseHeader}>
-        <View style={{ flex: 1 }}>
+        <TouchableOpacity 
+          style={{ flex: 1 }} 
+          onPress={() => navigation.navigate('ExerciseDetail', { exerciseId: item.exerciseId })}
+        >
           <Text style={styles.exerciseName}>{item.exerciseName}</Text>
-        </View>
+        </TouchableOpacity>
         <View style={styles.exerciseActions}>
           <TouchableOpacity onPress={() => moveExercise(index, 'up')} style={styles.actionIcon}>
             <Ionicons name="chevron-up" size={20} color="#888" />

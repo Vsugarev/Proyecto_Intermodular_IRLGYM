@@ -45,17 +45,27 @@ export const ExerciseDetailScreen = ({ route, navigation }: any) => {
   }, 0);
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
         {exercise.imageUrl ? (
-          <Image source={{ uri: exercise.imageUrl }} style={styles.image} />
+          <Image source={{ uri: exercise.imageUrl }} style={styles.image} resizeMode="cover" />
         ) : (
           <View style={[styles.image, styles.placeholder]}>
-            <Ionicons name="barbell" size={80} color="#ccc" />
+            <Ionicons name="barbell-outline" size={80} color="#8e8e93" />
+            <Text style={styles.placeholderText}>Sin imagen disponible</Text>
           </View>
         )}
-        <Text style={styles.title}>{exercise.name}</Text>
-        <Text style={styles.muscleGroup}>{exercise.muscleGroup || 'Grupo muscular no especificado'}</Text>
+        <View style={styles.headerInfo}>
+          <Text style={styles.title}>{exercise.name}</Text>
+          <View style={styles.badgeContainer}>
+            <View style={styles.muscleBadge}>
+              <Text style={styles.muscleText}>{exercise.muscleGroup || 'General'}</Text>
+            </View>
+            <View style={[styles.muscleBadge, { backgroundColor: '#e5e5ea' }]}>
+              <Text style={[styles.muscleText, { color: '#8e8e93' }]}>{exercise.category || 'Fuerza'}</Text>
+            </View>
+          </View>
+        </View>
       </View>
 
       <View style={styles.section}>
@@ -98,21 +108,31 @@ export const ExerciseDetailScreen = ({ route, navigation }: any) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  header: { alignItems: 'center', padding: 20, backgroundColor: '#f9f9f9' },
-  image: { width: '100%', height: 250, borderRadius: 15, marginBottom: 15 },
-  placeholder: { justifyContent: 'center', alignItems: 'center', backgroundColor: '#eee' },
-  title: { fontSize: 26, fontWeight: 'bold', color: '#1a1a1a' },
-  muscleGroup: { fontSize: 16, color: '#28a745', fontWeight: '600', marginTop: 5 },
-  section: { padding: 20 },
-  sectionTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 10, color: '#333' },
-  description: { fontSize: 15, color: '#666', lineHeight: 22 },
-  statsRow: { flexDirection: 'row', paddingHorizontal: 15, justifyContent: 'space-between' },
-  statCard: { backgroundColor: '#f0fdf4', padding: 15, borderRadius: 12, width: '48%', alignItems: 'center' },
-  statLabel: { fontSize: 12, color: '#166534', marginBottom: 5 },
-  statValue: { fontSize: 18, fontWeight: 'bold', color: '#1a1a1a' },
-  historyCard: { backgroundColor: '#f9f9f9', padding: 15, borderRadius: 12, marginBottom: 10, borderWidth: 1, borderColor: '#eee' },
-  historyDate: { fontSize: 14, fontWeight: 'bold', color: '#666', marginBottom: 8 },
-  seriesText: { fontSize: 14, color: '#333', marginBottom: 2 },
-  emptyText: { textAlign: 'center', color: '#999', marginTop: 20, fontStyle: 'italic' }
+  container: { flex: 1, backgroundColor: '#f5f5f7' },
+  header: { backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e5e5ea' },
+  image: { width: '100%', height: 300 },
+  placeholder: { justifyContent: 'center', alignItems: 'center', backgroundColor: '#e5e5ea' },
+  placeholderText: { color: '#8e8e93', marginTop: 10, fontSize: 12, fontWeight: '600' },
+  headerInfo: { padding: 20 },
+  title: { fontSize: 28, fontWeight: '800', color: '#000', letterSpacing: -0.5 },
+  badgeContainer: { flexDirection: 'row', marginTop: 12 },
+  muscleBadge: { 
+    backgroundColor: '#e8f5e9', 
+    paddingHorizontal: 12, 
+    paddingVertical: 6, 
+    borderRadius: 8,
+    marginRight: 8
+  },
+  muscleText: { color: '#28a745', fontSize: 12, fontWeight: 'bold', textTransform: 'uppercase' },
+  section: { padding: 20, backgroundColor: '#fff', marginTop: 12 },
+  sectionTitle: { fontSize: 18, fontWeight: '700', marginBottom: 12, color: '#000' },
+  description: { fontSize: 15, color: '#48484a', lineHeight: 22 },
+  statsRow: { flexDirection: 'row', padding: 15, justifyContent: 'space-between' },
+  statCard: { backgroundColor: '#fff', padding: 15, borderRadius: 16, width: '48%', alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, elevation: 2 },
+  statLabel: { fontSize: 11, color: '#8e8e93', marginBottom: 4, fontWeight: '700', textTransform: 'uppercase' },
+  statValue: { fontSize: 20, fontWeight: '800', color: '#000' },
+  historyCard: { backgroundColor: '#fff', padding: 16, borderRadius: 16, marginBottom: 12, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, elevation: 2 },
+  historyDate: { fontSize: 14, fontWeight: '700', color: '#8e8e93', marginBottom: 10 },
+  seriesText: { fontSize: 15, color: '#1c1c1e', marginBottom: 4, fontWeight: '500' },
+  emptyText: { textAlign: 'center', color: '#8e8e93', marginTop: 20, fontSize: 14 }
 });
