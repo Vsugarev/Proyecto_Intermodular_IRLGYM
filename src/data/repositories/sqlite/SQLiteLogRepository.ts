@@ -54,4 +54,9 @@ export class SQLiteLogRepository implements ILogRepository {
     const db = await SQLiteClient.getInstance();
     await db.runAsync('DELETE FROM workout_logs WHERE workoutId = ?', [workoutId]);
   }
+
+  async deleteByExerciseId(exerciseId: string): Promise<void> {
+    const db = await SQLiteClient.getInstance();
+    await db.runAsync('DELETE FROM workout_logs WHERE exerciseId = ?', [exerciseId]);
+  }
 }

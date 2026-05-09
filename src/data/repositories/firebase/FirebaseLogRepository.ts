@@ -42,4 +42,12 @@ export class FirebaseLogRepository implements ILogRepository {
     snap.docs.forEach(d => batch.delete(d.ref));
     await batch.commit();
   }
+
+  async deleteByExerciseId(exerciseId: string): Promise<void> {
+    const q = query(collection(db, this.colName), where('exerciseId', '==', exerciseId));
+    const snap = await getDocs(q);
+    const batch = writeBatch(db);
+    snap.docs.forEach(d => batch.delete(d.ref));
+    await batch.commit();
+  }
 }

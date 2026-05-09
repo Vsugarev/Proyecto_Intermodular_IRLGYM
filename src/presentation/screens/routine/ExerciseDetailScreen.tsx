@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { 
   View, Text, StyleSheet, ScrollView, Image, 
-  ActivityIndicator, TouchableOpacity 
+  ActivityIndicator, TouchableOpacity, Alert
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { ExerciseService } from '../../../application/service/ExerciseService';
 import { WorkoutService } from '../../../application/service/WorkoutService';
 import { LogRepository } from '../../../data/repositories/index';
@@ -22,8 +23,52 @@ export const ExerciseDetailScreen = ({ route, navigation }: any) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadData();
-  }, [exerciseId]);
+    if (exercise?.isCustom) {
+      navigation.setOptions({
+        headerRight: () => (
+          <View style={{ flexDirection: 'row', marginRight: 10 }}>
+            <TouchableOpacity onPress={() => navigation.navigate('ExerciseCreate', { exerciseId: exercise.id })} style={{ padding: 8 }}>
+              <Ionicons name="create-outline" size={24} color="#28a745" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleDelete} style={{ padding: 8 }}>
+              <Ionicons name="trash-outline" size={24} color="#ff3b30" />
+            </TouchableOpacity>
+          </View>
+        )
+      });
+    } else {
+      navigation.setOptions({ headerRight: () => null });
+    }
+  }, [exercise]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      loadData();
+    }, [exerciseId])
+  );
+
+  const handleDelete = () => {
+    Alert.alert(
+      "Eliminar Ejercicio",
+      "¿Estás seguro de que quieres eliminar este ejercicio personalizado? Esta acción no se puede deshacer.",
+      [
+        { text: "Cancelar", style: "cancel" },
+        { 
+          text: "Eliminar", 
+          style: "destructive", 
+          onPress: async () => {
+            try {
+              await ExerciseService.deleteExercise(exerciseId);
+              navigation.goBack();
+            } catch (e: any) {
+              console.error(e);
+              Alert.alert("Error", "No se pudo eliminar el ejercicio. Comprueba si está siendo usado en alguna rutina activa.");
+            }
+          } 
+        }
+      ]
+    );
+  };
 
   const loadData = async () => {
     try {

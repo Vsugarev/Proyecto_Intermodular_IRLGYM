@@ -1,4 +1,4 @@
-import { ExerciseRepository } from '../../data/repositories/index';
+import { ExerciseRepository, LogRepository } from '../../data/repositories/index';
 import { LibraryExercise } from '../../domain/entities/LibraryExercise';
 
 export const ExerciseService = {
@@ -31,6 +31,9 @@ export const ExerciseService = {
   },
 
   async deleteExercise(id: string) {
+    // Primero borramos los logs asociados para evitar errores de clave foránea
+    await LogRepository.deleteByExerciseId(id);
+    // Ahora ya podemos borrar el ejercicio
     await ExerciseRepository.delete(id);
   },
 

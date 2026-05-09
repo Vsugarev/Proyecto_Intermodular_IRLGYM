@@ -53,6 +53,19 @@ class HybridRepository {
     }
   }
 
+  async deleteByExerciseId(exerciseId: string) {
+    if (this.local.deleteByExerciseId) {
+      await this.local.deleteByExerciseId(exerciseId);
+    }
+    try {
+      if (this.cloud.deleteByExerciseId) {
+        await this.cloud.deleteByExerciseId(exerciseId);
+      }
+    } catch (e) {
+      console.log("Error cloud deleteByExerciseId");
+    }
+  }
+
   async findById(id: string) { return await this.local.findById(id); }
   async findByUserId(userId: string) { return await this.local.findByUserId(userId); }
   async findAllByUserId(userId: string) { return await this.local.findAllByUserId(userId); }

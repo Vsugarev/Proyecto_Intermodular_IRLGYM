@@ -16,4 +16,5 @@ export interface ILogRepository {
   // DELETE
   delete(id: string): Promise<void>;
   deleteByWorkoutId(workoutId: string): Promise<void>;
+  deleteByExerciseId(exerciseId: string): Promise<void>;
 }

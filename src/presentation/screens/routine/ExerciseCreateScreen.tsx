@@ -1,15 +1,36 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ScrollView } from 'react-native';
-import { ExerciseRepository } from '../../../data/repositories/index';
+import { ExerciseService } from '../../../application/service/ExerciseService';
 import { LibraryExercise, TrainingBranch } from '../../../domain/entities/LibraryExercise';
 
-export const ExerciseCreateScreen = ({ navigation }: any) => {
+export const ExerciseCreateScreen = ({ route, navigation }: any) => {
+  const { exerciseId } = route.params || {};
+  const isEditing = !!exerciseId;
+
   const [name, setName] = useState('');
   const [category, setCategory] = useState('Pecho');
   const [branch, setBranch] = useState<TrainingBranch>('base');
 
   const [description, setDescription] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+
+  React.useEffect(() => {
+    if (isEditing) {
+      loadExercise();
+    }
+  }, [exerciseId]);
+
+  const loadExercise = async () => {
+    const ex = await ExerciseService.getExerciseById(exerciseId);
+    if (ex) {
+      setName(ex.name);
+      setCategory(ex.category);
+      setBranch(ex.branch);
+      setDescription(ex.description || '');
+      setImageUrl(ex.imageUrl || '');
+      navigation.setOptions({ title: 'Editar Ejercicio' });
+    }
+  };
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -18,21 +39,35 @@ export const ExerciseCreateScreen = ({ navigation }: any) => {
     }
 
     try {
-      const newExercise: LibraryExercise = {
-        id: `custom_${Date.now()}`,
-        name: name.trim(),
-        category: category,
-        branch: branch,
-        description: description.trim() || undefined,
-        imageUrl: imageUrl.trim() || undefined,
-        muscleGroup: category,
-        isCustom: true,
-        isFavorite: false
-      };
-
-      await ExerciseRepository.save(newExercise);
-
-      Alert.alert("Éxito", "Ejercicio creado correctamente");
+      if (isEditing) {
+        const updatedExercise: LibraryExercise = {
+          id: exerciseId,
+          name: name.trim(),
+          category: category,
+          branch: branch,
+          description: description.trim() || undefined,
+          imageUrl: imageUrl.trim() || undefined,
+          muscleGroup: category,
+          isCustom: true,
+          isFavorite: false
+        };
+        await ExerciseService.saveCustomExercise(updatedExercise);
+        Alert.alert("Éxito", "Ejercicio actualizado correctamente");
+      } else {
+        const newExercise: LibraryExercise = {
+          id: `custom_${Date.now()}`,
+          name: name.trim(),
+          category: category,
+          branch: branch,
+          description: description.trim() || undefined,
+          imageUrl: imageUrl.trim() || undefined,
+          muscleGroup: category,
+          isCustom: true,
+          isFavorite: false
+        };
+        await ExerciseService.saveCustomExercise(newExercise);
+        Alert.alert("Éxito", "Ejercicio creado correctamente");
+      }
       navigation.goBack();
     } catch (e) {
       Alert.alert("Error", "No se pudo guardar el ejercicio");
@@ -106,15 +141,37 @@ export const ExerciseCreateScreen = ({ navigation }: any) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#fff' },
-  label: { fontSize: 14, fontWeight: 'bold', color: '#666', marginBottom: 8, marginTop: 15 },
-  input: { borderWidth: 1, borderColor: '#ddd', padding: 12, borderRadius: 8, backgroundColor: '#f9f9f9' },
-  textArea: { height: 100, textAlignVertical: 'top' },
-  categoryContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 10 },
-  chip: { padding: 10, borderWidth: 1, borderColor: '#ddd', borderRadius: 20 },
+  container: { flex: 1, padding: 20, backgroundColor: '#f5f5f7' },
+  label: { fontSize: 13, fontWeight: '700', color: '#8e8e93', marginBottom: 8, marginTop: 20, textTransform: 'uppercase' },
+  input: { 
+    backgroundColor: '#fff', 
+    padding: 16, 
+    borderRadius: 14, 
+    fontSize: 16, 
+    color: '#1c1c1e',
+    shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5, elevation: 2
+  },
+  textArea: { height: 120, textAlignVertical: 'top' },
+  categoryContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
+  chip: { 
+    paddingHorizontal: 16, 
+    paddingVertical: 10, 
+    borderRadius: 12, 
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#e5e5ea'
+  },
   activeChip: { backgroundColor: '#28a745', borderColor: '#28a745' },
   activeText: { color: '#fff', fontWeight: 'bold' },
-  text: { color: '#333' },
-  saveBtn: { backgroundColor: '#28a745', padding: 15, borderRadius: 10, alignItems: 'center', marginTop: 40 },
-  btnText: { color: '#fff', fontWeight: 'bold' }
+  text: { color: '#1c1c1e', fontWeight: '600', fontSize: 13 },
+  saveBtn: { 
+    backgroundColor: '#28a745', 
+    padding: 18, 
+    borderRadius: 16, 
+    alignItems: 'center', 
+    marginTop: 40, 
+    marginBottom: 30,
+    shadowColor: '#28a745', shadowOpacity: 0.3, shadowRadius: 10, elevation: 5
+  },
+  btnText: { color: '#fff', fontWeight: 'bold', fontSize: 16 }
 });
