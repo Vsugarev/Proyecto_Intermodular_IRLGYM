@@ -7,7 +7,6 @@ import { auth } from '../../../infrastructure/config/firebase';
 
 export const HomeScreen = ({ navigation }: any) => {
   const [templates, setTemplates] = useState<any[]>([]);
-  const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useFocusEffect(
@@ -27,7 +26,6 @@ export const HomeScreen = ({ navigation }: any) => {
       setLoading(true);
       const data = await WorkoutService.getWorkoutsByUser(uid);
       setTemplates(data.filter(w => w.isTemplate));
-      setHistory(data.filter(w => !w.isTemplate && w.status === 'completed'));
     } catch (e) {
       console.error(e);
     } finally {
@@ -117,22 +115,6 @@ export const HomeScreen = ({ navigation }: any) => {
               </View>
             ))}
             {templates.length === 0 && <Text key="empty-templates" style={styles.emptyText}>No tienes plantillas.</Text>}
-
-            <Text key="history-title" style={[styles.subtitle, { marginTop: 30, marginBottom: 15 }]}>Historial Reciente</Text>
-            {history.map(item => (
-              <TouchableOpacity 
-                key={item.id} 
-                style={[styles.routineCard, { backgroundColor: '#fdfdfd', borderLeftWidth: 4, borderLeftColor: '#007aff' }]}
-                onPress={() => navigation.navigate('EditRoutine', { routine: item })}
-              >
-                <View style={styles.routineInfo}>
-                  <Text style={styles.routineName}>{item.name}</Text>
-                  <Text style={styles.routineDate}>{new Date(item.date).toLocaleDateString()}</Text>
-                </View>
-                <Ionicons name="checkmark-done-circle" size={24} color="#007aff" />
-              </TouchableOpacity>
-            ))}
-            {history.length === 0 && <Text key="empty-history" style={styles.emptyText}>Sin entrenamientos finalizados.</Text>}
             <View style={{ height: 100 }} />
           </>
         }

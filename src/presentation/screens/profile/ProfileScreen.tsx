@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Button, ScrollView, TouchableOpacity, TextInput, Image, Alert, ActivityIndicator } from 'react-native';
-import { UserStatsRepository, UserProfileRepository } from '../../../data/repositories/index';
+import { UserStatsRepository, UserProfileRepository, WorkoutRepository } from '../../../data/repositories/index';
 import { AuthService } from '../../../application/service/AuthService';
-import { UserStats, UserProfile } from '../../../domain/entities/User';
+import { UserStats, UserProfile, Workout } from '../../../domain/entities/User';
 import { auth } from '../../../infrastructure/config/firebase';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 
 export const ProfileScreen = () => {
   const [stats, setStats] = useState<UserStats | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
 
@@ -20,13 +22,21 @@ export const ProfileScreen = () => {
   const fetchData = async () => {
     if (auth.currentUser) {
       const uid = auth.currentUser.uid;
-      const [statsData, profileData] = await Promise.all([
+      const [statsData, profileData, workoutsData] = await Promise.all([
         UserStatsRepository.findByUserId(uid),
-        UserProfileRepository.findById(uid)
+        UserProfileRepository.findById(uid),
+        WorkoutRepository.findAllByUserId(uid)
       ]);
       
       setStats(statsData);
       setProfile(profileData);
+      
+      // Filtramos solo entrenamientos completados y reales (no plantillas)
+      const completedWorkouts = workoutsData
+        .filter((w: any) => w.status === 'completed' && !w.isTemplate)
+        .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      
+      setWorkouts(completedWorkouts);
       
       if (profileData) {
         setUsername(profileData.username);
@@ -37,9 +47,11 @@ export const ProfileScreen = () => {
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchData();
+    }, [])
+  );
 
   const handleUpdateProfile = async () => {
     if (!profile) return;
@@ -151,6 +163,37 @@ export const ProfileScreen = () => {
             <Text style={styles.statLabel}>XP Total</Text>
           </View>
         </View>
+
+        <Text style={styles.sectionTitle}>Entrenamientos Recientes</Text>
+        {workouts.length > 0 ? (
+          workouts.map((workout) => (
+            <TouchableOpacity 
+              key={workout.id} 
+              style={styles.workoutHistoryCard}
+              onPress={() => Alert.alert("Detalles", "Próximamente: Ver resumen del entrenamiento")}
+            >
+              <View style={styles.workoutIconCircle}>
+                <Ionicons name="checkmark-circle" size={24} color="#28a745" />
+              </View>
+              <View style={styles.workoutInfo}>
+                <Text style={styles.workoutName}>{workout.name}</Text>
+                <Text style={styles.workoutDate}>
+                  {new Date(workout.date).toLocaleDateString(undefined, { 
+                    weekday: 'long', 
+                    day: 'numeric', 
+                    month: 'long' 
+                  })}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#c7c7cc" />
+            </TouchableOpacity>
+          ))
+        ) : (
+          <View style={styles.emptyHistory}>
+            <Ionicons name="fitness-outline" size={40} color="#c7c7cc" />
+            <Text style={styles.emptyText}>Aún no has completado entrenamientos</Text>
+          </View>
+        )}
       </View>
 
       <View style={styles.footer}>
@@ -175,8 +218,8 @@ const styles = StyleSheet.create({
   email: { color: '#8e8e93', fontSize: 14, marginBottom: 5 },
   levelLabel: { color: '#28a745', fontSize: 32, fontWeight: '800' },
   content: { padding: 20 },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
-  sectionTitle: { fontSize: 18, fontWeight: '800', color: '#1c1c1e' },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15, marginTop: 10 },
+  sectionTitle: { fontSize: 18, fontWeight: '800', color: '#1c1c1e', marginTop: 20 },
   editBtnText: { color: '#007aff', fontWeight: '600' },
   infoGrid: { flexDirection: 'row', gap: 15, marginBottom: 25 },
   infoCard: { 
@@ -214,5 +257,37 @@ const styles = StyleSheet.create({
   saveBtnText: { color: '#fff', fontWeight: '800', fontSize: 14 },
   footer: { padding: 20, alignItems: 'center', marginBottom: 40 },
   logoutBtn: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  logoutText: { color: '#ff3b30', fontWeight: '700', fontSize: 16 }
+  logoutText: { color: '#ff3b30', fontWeight: '700', fontSize: 16 },
+  workoutHistoryCard: {
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    marginBottom: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2
+  },
+  workoutIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#f2f2f7',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 15
+  },
+  workoutInfo: { flex: 1 },
+  workoutName: { fontSize: 16, fontWeight: '700', color: '#1c1c1e', marginBottom: 2 },
+  workoutDate: { fontSize: 12, color: '#8e8e93', textTransform: 'capitalize' },
+  emptyHistory: { 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    padding: 30, 
+    marginTop: 10 
+  },
+  emptyText: { color: '#8e8e93', marginTop: 10, fontSize: 14, textAlign: 'center' }
 });
