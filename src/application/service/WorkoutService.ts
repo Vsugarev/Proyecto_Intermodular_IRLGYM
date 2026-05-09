@@ -3,6 +3,19 @@ import { Workout } from '../../domain/entities/Workout';
 import { LogService } from './LogService';
 
 export const WorkoutService = {
+  async createEmptyTemplate(userId: string, name: string): Promise<Workout> {
+    const newWorkout: Workout = {
+      id: `wk_${Date.now()}`,
+      userId,
+      name: name || "Nueva Plantilla",
+      date: new Date().toISOString(),
+      status: 'completed', // Las plantillas se guardan como completadas para que no salten como 'en curso'
+      isTemplate: true
+    };
+    await WorkoutRepository.save(newWorkout);
+    return newWorkout;
+  },
+
   async startWorkout(userId: string, name: string): Promise<Workout> {
     const existing = await WorkoutRepository.findInProgressByUserId(userId);
     if (existing) return existing;
@@ -10,10 +23,10 @@ export const WorkoutService = {
     const newWorkout: Workout = {
       id: `wk_${Date.now()}`,
       userId,
-      name: name || "Nueva Plantilla",
+      name: name || "Nuevo Entrenamiento",
       date: new Date().toISOString(),
-      status: 'completed',
-      isTemplate: true
+      status: 'in_progress',
+      isTemplate: false
     };
     await WorkoutRepository.save(newWorkout);
     return newWorkout;

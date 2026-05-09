@@ -41,8 +41,8 @@ export const HomeScreen = ({ navigation }: any) => {
     }
 
     try {
-      const defaultName = "Nueva Rutina " + new Date().toLocaleDateString();
-      const newRoutine = await WorkoutService.startWorkout(user.uid, defaultName);
+      const defaultName = "Nueva Rutina";
+      const newRoutine = await WorkoutService.createEmptyTemplate(user.uid, defaultName);
       navigation.navigate('EditRoutine', { routine: newRoutine });
     } catch (e: any) {
       Alert.alert("Error", e.message || "No se pudo crear la rutina");
