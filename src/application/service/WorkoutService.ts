@@ -54,7 +54,8 @@ export const WorkoutService = {
       name: `Sesión: ${new Date().toLocaleDateString()}`,
       date: new Date().toISOString(),
       status: 'in_progress',
-      isTemplate: false
+      isTemplate: false,
+      parentId: originalWorkoutId
     };
     
     await WorkoutRepository.save(newWorkout);
@@ -65,10 +66,17 @@ export const WorkoutService = {
       
       await LogRepository.save({
         ...log,
-        id: `log_${Date.now()}_${Math.random()}`,
+        id: `log_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
         workoutId: newWorkout.id,
-        // Si hay un registro previo, usamos sus pesos/reps, si no los de la plantilla
-        series: lastRealLog ? lastRealLog.series : log.series,
+        // Respetamos el NÚMERO de series de la plantilla, pero rellenamos con valores previos
+        series: log.series.map((s, idx) => {
+          const lastSeries = lastRealLog?.series[idx];
+          return {
+            ...s,
+            kg: lastSeries ? lastSeries.kg : s.kg,
+            reps: lastSeries ? lastSeries.reps : s.reps
+          };
+        }),
         sync_status: 1
       });
     }

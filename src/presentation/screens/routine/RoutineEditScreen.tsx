@@ -18,6 +18,7 @@ export const RoutineEditScreen = ({ route, navigation }: any) => {
   const [name, setName] = useState(routine?.name || '');
   const [exercises, setExercises] = useState<ExerciseWithLog[]>([]);
   const [saving, setSaving] = useState(false);
+  const [originalStructure, setOriginalStructure] = useState<string>('');
 
   useEffect(() => {
     if (routine?.id) loadExercises();
@@ -36,6 +37,10 @@ export const RoutineEditScreen = ({ route, navigation }: any) => {
         };
       }));
       setExercises(logsWithDetails);
+      
+      // Guardamos la huella digital de la estructura original (Rutine-view-03 Smart)
+      const structure = logsWithDetails.map(ex => `${ex.exerciseId}:${ex.series.length}`).join('|');
+      setOriginalStructure(structure);
     } catch (e) {
       console.error(e);
     }
@@ -43,14 +48,64 @@ export const RoutineEditScreen = ({ route, navigation }: any) => {
 
   const handleUpdate = async () => {
     if (saving) return;
+
+    // Calculamos la estructura actual para ver si ha cambiado (Smart Alert)
+    const currentStructure = exercises.map(ex => `${ex.exerciseId}:${ex.series.length}`).join('|');
+    const hasStructureChanged = currentStructure !== originalStructure;
+
+    if (routine?.status === 'in_progress' && routine?.parentId && hasStructureChanged) {
+      Alert.alert(
+        "¿Actualizar rutina original?",
+        "Has detectado cambios en la estructura (ejercicios o series). ¿Quieres guardarlos como el nuevo estándar de esta rutina?",
+        [
+          { 
+            text: "No, solo hoy", 
+            onPress: () => performSave(false),
+            style: "cancel"
+          },
+          { 
+            text: "Sí, actualizar", 
+            onPress: () => performSave(true) 
+          }
+        ]
+      );
+    } else {
+      // Si no hay cambios estructurales o no hay parentId, guardamos normal
+      performSave(false);
+    }
+  };
+
+  const performSave = async (updateTemplate: boolean) => {
     try {
       setSaving(true);
       const updatedStatus = routine?.status === 'in_progress' ? 'completed' : routine?.status;
+      
+      // 1. Guardamos la sesión actual
       await WorkoutService.updateWorkout({ ...routine, name, status: updatedStatus });
-
-      // Guardamos todos los logs (INSERT OR REPLACE)
       for (const log of exercises) {
         await LogService.saveLog(log);
+      }
+
+      // 2. Si el usuario quiere que esta sea su nueva "plantilla" predeterminada
+      if (updateTemplate && routine.parentId) {
+        // Actualizamos también el nombre de la rutina original por si lo ha cambiado
+        const parentWorkout = await WorkoutService.getWorkoutById(routine.parentId);
+        if (parentWorkout) {
+          await WorkoutService.updateWorkout({ ...parentWorkout, name });
+          
+          // Reemplazamos los ejercicios de la plantilla por los actuales (Hevy style)
+          const { LogRepository } = require('../../../data/repositories/index');
+          await LogRepository.deleteByWorkoutId(routine.parentId);
+
+          for (const log of exercises) {
+            await LogService.saveLog({
+              ...log,
+              id: `log_tpl_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+              workoutId: routine.parentId,
+              series: log.series.map(s => ({ ...s, kg: 0, reps: 0 }))
+            });
+          }
+        }
       }
 
       Alert.alert("Éxito", routine?.status === 'in_progress' ? "Entrenamiento finalizado" : "Cambios guardados");

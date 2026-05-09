@@ -20,4 +20,5 @@ export interface Workout {
   date: string;
   status: 'completed' | 'in_progress';
   isTemplate?: boolean;
+  parentId?: string;
 }

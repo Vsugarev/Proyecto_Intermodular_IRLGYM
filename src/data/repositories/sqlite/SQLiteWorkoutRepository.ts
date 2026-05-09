@@ -6,21 +6,21 @@ export class SQLiteWorkoutRepository implements IWorkoutRepository {
   async save(workout: Workout): Promise<void> {
     const db = await SQLiteClient.getInstance();
     await db.runAsync(
-      'INSERT OR REPLACE INTO workouts (id, userId, name, date, status, is_template, sync_status) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [workout.id, workout.userId, workout.name, workout.date, workout.status, workout.isTemplate ? 1 : 0, 1]
+      'INSERT OR REPLACE INTO workouts (id, userId, name, date, status, is_template, parent_id, sync_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [workout.id, workout.userId, workout.name, workout.date, workout.status, workout.isTemplate ? 1 : 0, workout.parentId || null, 1]
     );
   }
 
   async findById(id: string): Promise<Workout | null> {
     const db = await SQLiteClient.getInstance();
     const row = await db.getFirstAsync<any>('SELECT * FROM workouts WHERE id = ?', [id]);
-    return row ? { ...row, isTemplate: !!row.is_template } : null;
+    return row ? { ...row, isTemplate: !!row.is_template, parentId: row.parent_id } : null;
   }
 
   async findAllByUserId(userId: string): Promise<Workout[]> {
     const db = await SQLiteClient.getInstance();
     const rows = await db.getAllAsync<any>('SELECT * FROM workouts WHERE userId = ? ORDER BY date DESC', [userId]);
-    return rows.map(row => ({ ...row, isTemplate: !!row.is_template }));
+    return rows.map(row => ({ ...row, isTemplate: !!row.is_template, parentId: row.parent_id }));
   }
 
   async findInProgressByUserId(userId: string): Promise<Workout | null> {
@@ -29,14 +29,14 @@ export class SQLiteWorkoutRepository implements IWorkoutRepository {
       'SELECT * FROM workouts WHERE userId = ? AND status = ?', 
       [userId, 'in_progress']
     );
-    return row ? { ...row, isTemplate: !!row.is_template } : null;
+    return row ? { ...row, isTemplate: !!row.is_template, parentId: row.parent_id } : null;
   }
 
   async update(workout: Workout): Promise<void> {
     const db = await SQLiteClient.getInstance();
     await db.runAsync(
-      'UPDATE workouts SET name = ?, date = ?, status = ?, is_template = ?, sync_status = 1 WHERE id = ?',
-      [workout.name, workout.date, workout.status, workout.isTemplate ? 1 : 0, workout.id]
+      'UPDATE workouts SET name = ?, date = ?, status = ?, is_template = ?, parent_id = ?, sync_status = 1 WHERE id = ?',
+      [workout.name, workout.date, workout.status, workout.isTemplate ? 1 : 0, workout.parentId || null, workout.id]
     );
   }
 
