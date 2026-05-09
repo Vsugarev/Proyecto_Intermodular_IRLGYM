@@ -42,6 +42,19 @@ export const RoutineDetailScreen = ({ route, navigation }: any) => {
     }
   };
 
+  React.useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity 
+          onPress={() => navigation.navigate('EditRoutine', { routine: routine })}
+          style={{ marginRight: 10 }}
+        >
+          <Text style={{ color: '#28a745', fontWeight: 'bold', fontSize: 16 }}>Editar</Text>
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, routine]);
+
   useFocusEffect(
     useCallback(() => {
       loadData();
@@ -68,8 +81,8 @@ export const RoutineDetailScreen = ({ route, navigation }: any) => {
         <Text style={styles.sectionTitle}>Ejercicios ({exercises?.length || 0})</Text>
         {exercises && exercises.length > 0 ? (
           exercises.map((item, index) => (
-            <TouchableOpacity
-              key={item.id}
+            <TouchableOpacity 
+              key={item.id} 
               style={styles.exerciseItem}
               onPress={() => navigation.navigate('ExerciseDetail', { exerciseId: item.exerciseId })}
             >
@@ -88,7 +101,7 @@ export const RoutineDetailScreen = ({ route, navigation }: any) => {
         )}
       </View>
 
-      <TouchableOpacity
+      <TouchableOpacity 
         style={styles.startBtn}
         onPress={async () => {
           const session = await WorkoutService.duplicateRoutine(routineId, routine.userId);

@@ -45,6 +45,7 @@ const ProfileStack = () => {
     <Stack.Navigator>
       <Stack.Screen name="ProfileMain" component={ProfileScreen} options={{ headerShown: false }} />
       <Stack.Screen name="RoutineDetail" component={RoutineDetailScreen} options={{ title: 'Resumen de Entrenamiento' }} />
+      <Stack.Screen name="EditRoutine" component={RoutineEditScreen} options={{ title: 'Editar Rutina' }} />
       <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={{ title: 'Detalle de Ejercicio' }} />
     </Stack.Navigator>
   );
