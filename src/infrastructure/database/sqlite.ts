@@ -9,7 +9,10 @@ export const initDatabase = async () => {
     `CREATE TABLE IF NOT EXISTS profiles (
       id TEXT PRIMARY KEY NOT NULL,
       username TEXT NOT NULL,
+      email TEXT,
       avatar_url TEXT,
+      weight REAL,
+      measurement_units TEXT DEFAULT 'kg',
       sync_status INTEGER DEFAULT 0,
       updated_at INTEGER
     );`,
@@ -88,6 +91,14 @@ export const initDatabase = async () => {
     await db.execAsync('ALTER TABLE workouts ADD COLUMN is_template INTEGER DEFAULT 0;');
   } catch (e) {
     // La columna probablemente ya existe
+  }
+
+  try {
+    await db.execAsync('ALTER TABLE profiles ADD COLUMN email TEXT;');
+    await db.execAsync('ALTER TABLE profiles ADD COLUMN weight REAL;');
+    await db.execAsync("ALTER TABLE profiles ADD COLUMN measurement_units TEXT DEFAULT 'kg';");
+  } catch (e) {
+    // Columnas probablemente ya existen
   }
 
   // Seed de ejercicios si está vacía

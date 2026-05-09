@@ -1,7 +1,10 @@
 export interface UserProfile {
   id: string;
   username: string;
+  email: string;
   avatarUrl?: string;
+  weight?: number;
+  measurementUnits: 'kg' | 'lb';
 }
 
 export interface UserStats {

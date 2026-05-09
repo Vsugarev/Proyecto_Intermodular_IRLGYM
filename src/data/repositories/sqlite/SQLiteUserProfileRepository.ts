@@ -6,22 +6,27 @@ export class SQLiteUserProfileRepository implements IUserProfileRepository {
   async save(profile: UserProfile): Promise<void> {
     const db = await SQLiteClient.getInstance();
     await db.runAsync(
-      'INSERT OR REPLACE INTO profiles (id, username, avatar_url, sync_status) VALUES (?, ?, ?, ?)',
-      [profile.id, profile.username, profile.avatarUrl ?? null, 1]
+      'INSERT OR REPLACE INTO profiles (id, username, email, avatar_url, weight, measurement_units, sync_status) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [profile.id, profile.username, profile.email, profile.avatarUrl ?? null, profile.weight ?? null, profile.measurementUnits, 1]
     );
   }
 
   async findById(id: string): Promise<UserProfile | null> {
     const db = await SQLiteClient.getInstance();
-    const row = await db.getFirstAsync<any>('SELECT id, username, avatar_url as avatarUrl FROM profiles WHERE id = ?', [id]);
-    return row || null;
+    const row = await db.getFirstAsync<any>('SELECT * FROM profiles WHERE id = ?', [id]);
+    if (!row) return null;
+    return {
+      ...row,
+      avatarUrl: row.avatar_url,
+      measurementUnits: row.measurement_units
+    };
   }
 
   async update(profile: UserProfile): Promise<void> {
     const db = await SQLiteClient.getInstance();
     await db.runAsync(
-      'UPDATE profiles SET username = ?, avatar_url = ?, sync_status = 1 WHERE id = ?',
-      [profile.username, profile.avatarUrl ?? null, profile.id]
+      'UPDATE profiles SET username = ?, email = ?, avatar_url = ?, weight = ?, measurement_units = ?, sync_status = 1 WHERE id = ?',
+      [profile.username, profile.email, profile.avatarUrl ?? null, profile.weight ?? null, profile.measurementUnits, profile.id]
     );
   }
 
