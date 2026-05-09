@@ -1,4 +1,4 @@
-import { LogRepository } from '../../data/repositories/index';
+import { LogRepository, WorkoutRepository } from '../../data/repositories/index';
 import { WorkoutLog, Set } from '../../domain/entities/Workout';
 
 export const LogService = {
@@ -31,5 +31,23 @@ export const LogService = {
 
   async deleteLog(logId: string) {
     await LogRepository.delete(logId);
+  },
+
+  async getLastLogForExercise(exerciseId: string, excludeWorkoutId: string): Promise<WorkoutLog | null> {
+    const allLogs = await LogRepository.findByExerciseId(exerciseId);
+    
+    // Necesitamos filtrar solo sesiones reales (no plantillas) y completadas
+    const validLogs = [];
+    for (const log of allLogs) {
+      if (log.workoutId === excludeWorkoutId) continue;
+      
+      const workout = await WorkoutRepository.findById(log.workoutId);
+      if (workout && !workout.isTemplate && workout.status === 'completed') {
+        validLogs.push(log);
+      }
+    }
+
+    const sortedLogs = validLogs.sort((a, b) => b.id.localeCompare(a.id));
+    return sortedLogs.length > 0 ? sortedLogs[0] : null;
   }
 };

@@ -19,4 +19,5 @@ export interface Workout {
   name: string;
   date: string;
   status: 'completed' | 'in_progress';
+  isTemplate?: boolean;
 }

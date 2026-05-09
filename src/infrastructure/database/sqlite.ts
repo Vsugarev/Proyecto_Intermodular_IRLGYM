@@ -42,6 +42,7 @@ export const initDatabase = async () => {
       name TEXT NOT NULL,
       date TEXT NOT NULL,
       status TEXT DEFAULT 'in_progress',
+      is_template INTEGER DEFAULT 0,
       sync_status INTEGER DEFAULT 1,
       FOREIGN KEY(userId) REFERENCES profiles(id) ON DELETE CASCADE
     );`,
@@ -80,6 +81,13 @@ export const initDatabase = async () => {
 
   for (const table of tables) {
     await db.execAsync(table);
+  }
+
+  // Migración manual para añadir is_template si ya existe la tabla
+  try {
+    await db.execAsync('ALTER TABLE workouts ADD COLUMN is_template INTEGER DEFAULT 0;');
+  } catch (e) {
+    // La columna probablemente ya existe
   }
 
   // Seed de ejercicios si está vacía

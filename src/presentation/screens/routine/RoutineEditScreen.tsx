@@ -8,6 +8,7 @@ import { WorkoutLog, Set } from '../../../domain/entities/Workout';
 
 interface ExerciseWithLog extends WorkoutLog {
   exerciseName: string;
+  previousSeries?: Set[];
 }
 
 const SET_TYPES: Set['type'][] = ['R', 'W', 'D', 'F'];
@@ -16,6 +17,7 @@ export const RoutineEditScreen = ({ route, navigation }: any) => {
   const { routine } = route.params || {};
   const [name, setName] = useState(routine?.name || '');
   const [exercises, setExercises] = useState<ExerciseWithLog[]>([]);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (routine?.id) loadExercises();
@@ -24,31 +26,59 @@ export const RoutineEditScreen = ({ route, navigation }: any) => {
   const loadExercises = async () => {
     try {
       const logs = await LogService.getLogsByWorkout(routine.id);
-      const logsWithNames = await Promise.all(logs.map(async (log: WorkoutLog) => {
+      const logsWithDetails = await Promise.all(logs.map(async (log: WorkoutLog) => {
         const exercise = await ExerciseService.getExerciseById(log.exerciseId);
-        return { ...log, exerciseName: exercise?.name || 'Ejercicio desconocido' };
+        const lastLog = await LogService.getLastLogForExercise(log.exerciseId, routine.id);
+        return { 
+          ...log, 
+          exerciseName: exercise?.name || 'Ejercicio desconocido',
+          previousSeries: lastLog?.series
+        };
       }));
-      setExercises(logsWithNames);
+      setExercises(logsWithDetails);
     } catch (e) {
       console.error(e);
     }
   };
 
   const handleUpdate = async () => {
+    if (saving) return;
     try {
-      await WorkoutService.updateWorkout({ ...routine, name });
+      setSaving(true);
+      const updatedStatus = routine?.status === 'in_progress' ? 'completed' : routine?.status;
+      await WorkoutService.updateWorkout({ ...routine, name, status: updatedStatus });
 
       // Guardamos todos los logs (INSERT OR REPLACE)
       for (const log of exercises) {
         await LogService.saveLog(log);
       }
 
-      Alert.alert("Éxito", "Cambios guardados");
+      Alert.alert("Éxito", routine?.status === 'in_progress' ? "Entrenamiento finalizado" : "Cambios guardados");
       navigation.goBack();
     } catch (e: any) {
       console.error(e);
       Alert.alert("Error", "No se pudo guardar los cambios");
+    } finally {
+      setSaving(false);
     }
+  };
+
+  const handleDiscard = () => {
+    Alert.alert(
+      "Descartar", 
+      "¿Estás seguro de que quieres borrar este entrenamiento? Se perderán todos los datos registrados.", 
+      [
+        { text: "No, continuar", style: "cancel" },
+        { 
+          text: "Sí, borrar", 
+          style: "destructive", 
+          onPress: async () => {
+            await WorkoutService.deleteWorkout(routine.id);
+            navigation.goBack();
+          } 
+        }
+      ]
+    );
   };
 
   const handleDelete = () => {
@@ -155,47 +185,61 @@ export const RoutineEditScreen = ({ route, navigation }: any) => {
     setExercises(newExercises);
   };
 
-  const renderSetRow = (set: Set, index: number, logId: string) => (
-    <View key={`${logId}-set-${index}`} style={styles.setRow}>
-      <TouchableOpacity 
-        style={[styles.setTypeBadge, (styles as any)[`setType_${set.type}`]]} 
-        onPress={() => cycleSetType(logId, index)}
-      >
-        <Text style={styles.setTypeText}>{set.type === 'R' ? index + 1 : set.type}</Text>
-      </TouchableOpacity>
+  const renderSetRow = (set: Set, index: number, logId: string) => {
+    const log = exercises.find(ex => ex.id === logId);
+    const prevSet = log?.previousSeries && log.previousSeries[index];
 
-      <TextInput
-        style={styles.setInput}
-        keyboardType="numeric"
-        value={set.kg.toString()}
-        onChangeText={(v) => updateSet(logId, index, 'kg', v)}
-        placeholder="0"
-        selectTextOnFocus
-      />
-      
-      <TextInput
-        style={styles.setInput}
-        keyboardType="numeric"
-        value={set.reps.toString()}
-        onChangeText={(v) => updateSet(logId, index, 'reps', v)}
-        placeholder="0"
-        selectTextOnFocus
-      />
+    return (
+      <View key={`${logId}-set-${index}`} style={styles.setRow}>
+        <TouchableOpacity 
+          style={[styles.setTypeBadge, (styles as any)[`setType_${set.type}`]]} 
+          onPress={() => cycleSetType(logId, index)}
+        >
+          <Text style={styles.setTypeText}>{set.type === 'R' ? index + 1 : set.type}</Text>
+        </TouchableOpacity>
 
-      <TextInput
-        style={styles.setInput}
-        keyboardType="numeric"
-        value={(set.rpe || 0).toString()}
-        onChangeText={(v) => updateSet(logId, index, 'rpe', v)}
-        placeholder="0"
-        selectTextOnFocus
-      />
+        <View style={styles.inputWrapper}>
+          {prevSet && <Text style={styles.previousLabel}>{prevSet.kg}kg</Text>}
+          <TextInput
+            style={styles.setInput}
+            keyboardType="numeric"
+            value={set.kg === 0 ? '' : set.kg.toString()}
+            onChangeText={(v) => updateSet(logId, index, 'kg', v)}
+            placeholder="0"
+            selectTextOnFocus
+          />
+        </View>
+        
+        <View style={styles.inputWrapper}>
+          {prevSet && <Text style={styles.previousLabel}>{prevSet.reps} reps</Text>}
+          <TextInput
+            style={styles.setInput}
+            keyboardType="numeric"
+            value={set.reps === 0 ? '' : set.reps.toString()}
+            onChangeText={(v) => updateSet(logId, index, 'reps', v)}
+            placeholder="0"
+            selectTextOnFocus
+          />
+        </View>
 
-      <TouchableOpacity onPress={() => removeSet(logId, index)} style={styles.deleteSetBtn}>
-        <Ionicons name="close-circle-outline" size={20} color="#ff4444" />
-      </TouchableOpacity>
-    </View>
-  );
+        <View style={styles.inputWrapper}>
+          {prevSet && prevSet.rpe ? <Text style={styles.previousLabel}>RPE {prevSet.rpe}</Text> : <Text style={styles.previousLabel}>-</Text>}
+          <TextInput
+            style={styles.setInput}
+            keyboardType="numeric"
+            value={set.rpe === 0 ? '' : set.rpe?.toString()}
+            onChangeText={(v) => updateSet(logId, index, 'rpe', v)}
+            placeholder="0"
+            selectTextOnFocus
+          />
+        </View>
+
+        <TouchableOpacity onPress={() => removeSet(logId, index)} style={styles.deleteSetBtn}>
+          <Ionicons name="close-circle-outline" size={20} color="#ff4444" />
+        </TouchableOpacity>
+      </View>
+    );
+  };
 
   const renderExerciseItem = ({ item, index }: { item: ExerciseWithLog, index: number }) => (
     <View style={styles.exerciseCard}>
@@ -265,13 +309,25 @@ export const RoutineEditScreen = ({ route, navigation }: any) => {
             </TouchableOpacity>
 
             <View style={styles.finalActions}>
-              <TouchableOpacity style={styles.saveBtn} onPress={handleUpdate}>
-                <Text style={styles.saveBtnText}>GUARDAR RUTINA</Text>
+              <TouchableOpacity 
+                style={[styles.saveBtn, routine?.status === 'in_progress' && styles.finishBtn, saving && { opacity: 0.7 }]} 
+                onPress={handleUpdate}
+                disabled={saving}
+              >
+                <Text style={styles.saveBtnText}>
+                  {saving ? 'GUARDANDO...' : (routine?.status === 'in_progress' ? 'FINALIZAR ENTRENAMIENTO' : 'GUARDAR RUTINA')}
+                </Text>
               </TouchableOpacity>
               
-              <TouchableOpacity style={styles.deleteRoutineBtn} onPress={handleDelete}>
-                <Text style={styles.deleteRoutineText}>Eliminar Rutina</Text>
-              </TouchableOpacity>
+              {routine?.status === 'in_progress' ? (
+                <TouchableOpacity style={styles.discardBtn} onPress={handleDiscard}>
+                  <Text style={styles.discardBtnText}>DESCARTAR ENTRENAMIENTO</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity style={styles.deleteRoutineBtn} onPress={handleDelete}>
+                  <Text style={styles.deleteRoutineText}>Eliminar Rutina</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         }
@@ -308,7 +364,9 @@ const styles = StyleSheet.create({
   actionIcon: { marginLeft: 15 },
   setTableHeader: { flexDirection: 'row', marginBottom: 8, paddingHorizontal: 4 },
   setTableLabel: { fontSize: 10, fontWeight: 'bold', color: '#8e8e93', textAlign: 'center' },
-  setRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  setRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  inputWrapper: { flex: 1, marginHorizontal: 4 },
+  previousLabel: { fontSize: 9, color: '#8e8e93', textAlign: 'center', marginBottom: 2, fontWeight: '600' },
   setTypeBadge: { 
     width: 30, 
     height: 30, 
@@ -367,7 +425,10 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4
   },
+  finishBtn: { backgroundColor: '#007aff', shadowColor: '#007aff' },
   saveBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
   deleteRoutineBtn: { marginTop: 20, alignItems: 'center' },
-  deleteRoutineText: { color: '#ff3b30', fontWeight: '600' }
+  deleteRoutineText: { color: '#ff3b30', fontWeight: '600' },
+  discardBtn: { marginTop: 20, alignItems: 'center', backgroundColor: '#ffe5e5', padding: 15, borderRadius: 12 },
+  discardBtnText: { color: '#ff3b30', fontWeight: 'bold', fontSize: 14 }
 });

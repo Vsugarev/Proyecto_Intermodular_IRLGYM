@@ -1,5 +1,6 @@
 import { WorkoutRepository, LogRepository } from '../../data/repositories/index';
 import { Workout } from '../../domain/entities/Workout';
+import { LogService } from './LogService';
 
 export const WorkoutService = {
   async startWorkout(userId: string, name: string): Promise<Workout> {
@@ -9,9 +10,10 @@ export const WorkoutService = {
     const newWorkout: Workout = {
       id: `wk_${Date.now()}`,
       userId,
-      name: name || "Nuevo Entrenamiento",
+      name: name || "Nueva Plantilla",
       date: new Date().toISOString(),
-      status: 'in_progress'
+      status: 'completed',
+      isTemplate: true
     };
     await WorkoutRepository.save(newWorkout);
     return newWorkout;
@@ -19,6 +21,10 @@ export const WorkoutService = {
 
   async getWorkoutsByUser(userId: string) {
     return await WorkoutRepository.findAllByUserId(userId);
+  },
+
+  async getWorkoutById(id: string) {
+    return await WorkoutRepository.findById(id);
   },
 
   async updateWorkout(workout: Workout) {
@@ -32,5 +38,36 @@ export const WorkoutService = {
   async deleteWorkout(id: string) {
     await WorkoutRepository.delete(id);
     await LogRepository.deleteByWorkoutId(id);
+  },
+
+  async duplicateRoutine(originalWorkoutId: string, userId: string): Promise<Workout> {
+    const logs = await LogRepository.findByWorkoutId(originalWorkoutId);
+    
+    const newWorkout: Workout = {
+      id: `wk_${Date.now()}`,
+      userId,
+      name: `Sesión: ${new Date().toLocaleDateString()}`,
+      date: new Date().toISOString(),
+      status: 'in_progress',
+      isTemplate: false
+    };
+    
+    await WorkoutRepository.save(newWorkout);
+    
+    for (const log of logs) {
+      // Buscamos el último registro real de este ejercicio para auto-rellenar (Hevy style)
+      const lastRealLog = await LogService.getLastLogForExercise(log.exerciseId, '');
+      
+      await LogRepository.save({
+        ...log,
+        id: `log_${Date.now()}_${Math.random()}`,
+        workoutId: newWorkout.id,
+        // Si hay un registro previo, usamos sus pesos/reps, si no los de la plantilla
+        series: lastRealLog ? lastRealLog.series : log.series,
+        sync_status: 1
+      });
+    }
+    
+    return newWorkout;
   }
 };

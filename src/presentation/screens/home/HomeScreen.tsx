@@ -1,11 +1,13 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, FlatList } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { WorkoutService } from '../../../application/service/WorkoutService';
 import { auth } from '../../../infrastructure/config/firebase';
 
 export const HomeScreen = ({ navigation }: any) => {
-  const [workouts, setWorkouts] = useState<any[]>([]);
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useFocusEffect(
@@ -24,7 +26,8 @@ export const HomeScreen = ({ navigation }: any) => {
     try {
       setLoading(true);
       const data = await WorkoutService.getWorkoutsByUser(uid);
-      setWorkouts(data);
+      setTemplates(data.filter(w => w.isTemplate));
+      setHistory(data.filter(w => !w.isTemplate && w.status === 'completed'));
     } catch (e) {
       console.error(e);
     } finally {
@@ -48,55 +51,124 @@ export const HomeScreen = ({ navigation }: any) => {
     }
   };
 
+  const handleStartRoutine = async (routineId: string) => {
+    const user = auth.currentUser;
+    if (!user) return;
+    try {
+      const session = await WorkoutService.duplicateRoutine(routineId, user.uid);
+      navigation.navigate('EditRoutine', { routine: session });
+    } catch (e) {
+      console.error(e);
+      Alert.alert("Error", "No se pudo iniciar el entrenamiento");
+    }
+  };
+
   const renderRoutineItem = ({ item }: any) => (
-    <TouchableOpacity 
-      style={styles.routineCard} 
-      onPress={() => navigation.navigate('EditRoutine', { routine: item })}
-    >
-      <View>
+    <View style={styles.routineCard}>
+      <TouchableOpacity 
+        style={styles.routineInfo} 
+        onPress={() => handleStartRoutine(item.id)}
+      >
         <Text style={styles.routineName}>{item.name || "Sin nombre"}</Text>
-        <Text style={styles.routineDate}>{new Date(item.date).toLocaleDateString()}</Text>
+        <Text style={styles.routineDate}>Creada el {new Date(item.date).toLocaleDateString()}</Text>
+      </TouchableOpacity>
+      
+      <View style={styles.cardActions}>
+        <TouchableOpacity 
+          style={styles.editIconBtn} 
+          onPress={() => navigation.navigate('EditRoutine', { routine: item })}
+        >
+          <Ionicons name="create-outline" size={20} color="#8e8e93" />
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.startBtn} 
+          onPress={() => handleStartRoutine(item.id)}
+        >
+          <Ionicons name="play" size={18} color="#fff" />
+          <Text style={styles.startBtnText}>ENTRENAR</Text>
+        </TouchableOpacity>
       </View>
-      <Text style={styles.arrow}>{'>'}</Text>
-    </TouchableOpacity>
+    </View>
   );
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Panel de Guerrero</Text>
-      <Text style={styles.userText}>Hola, {auth.currentUser?.email}</Text>
+      <View style={styles.header}>
+        <Text style={styles.title}>Panel de Guerrero</Text>
+        <Text style={styles.userText}>{auth.currentUser?.email}</Text>
+      </View>
       
-      <Text style={styles.subtitle}>Tus Rutinas</Text>
       <FlatList
-        data={workouts}
-        keyExtractor={(item) => item.id}
-        renderItem={renderRoutineItem}
-        ListEmptyComponent={<Text style={styles.emptyText}>No tienes rutinas aún. ¡Empieza una!</Text>}
-        contentContainerStyle={styles.listContainer}
-      />
+        data={[]} 
+        renderItem={null}
+        ListHeaderComponent={
+          <>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.subtitle}>Tus Rutinas</Text>
+              <TouchableOpacity onPress={handleCreateNew}>
+                <Text style={styles.addText}>+ NUEVA</Text>
+              </TouchableOpacity>
+            </View>
+            
+            {templates.map(item => (
+              <View key={item.id}>
+                {renderRoutineItem({ item })}
+              </View>
+            ))}
+            {templates.length === 0 && <Text key="empty-templates" style={styles.emptyText}>No tienes plantillas.</Text>}
 
-      <TouchableOpacity style={styles.createBtn} onPress={handleCreateNew}>
-        <Text style={styles.btnText}>+ EMPEZAR NUEVA RUTINA</Text>
-      </TouchableOpacity>
+            <Text key="history-title" style={[styles.subtitle, { marginTop: 30, marginBottom: 15 }]}>Historial Reciente</Text>
+            {history.map(item => (
+              <TouchableOpacity 
+                key={item.id} 
+                style={[styles.routineCard, { backgroundColor: '#fdfdfd', borderLeftWidth: 4, borderLeftColor: '#007aff' }]}
+                onPress={() => navigation.navigate('EditRoutine', { routine: item })}
+              >
+                <View style={styles.routineInfo}>
+                  <Text style={styles.routineName}>{item.name}</Text>
+                  <Text style={styles.routineDate}>{new Date(item.date).toLocaleDateString()}</Text>
+                </View>
+                <Ionicons name="checkmark-done-circle" size={24} color="#007aff" />
+              </TouchableOpacity>
+            ))}
+            {history.length === 0 && <Text key="empty-history" style={styles.emptyText}>Sin entrenamientos finalizados.</Text>}
+            <View style={{ height: 100 }} />
+          </>
+        }
+        showsVerticalScrollIndicator={false}
+      />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#f5f5f5' },
-  title: { fontSize: 28, fontWeight: 'bold', color: '#1a1a1a', marginTop: 40 },
-  userText: { fontSize: 14, color: '#666', marginBottom: 20 },
-  subtitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 15, color: '#333' },
+  container: { flex: 1, padding: 20, backgroundColor: '#f5f5f7' },
+  header: { marginTop: 40, marginBottom: 20 },
+  title: { fontSize: 32, fontWeight: '800', color: '#1c1c1e', letterSpacing: -1 },
+  userText: { fontSize: 14, color: '#8e8e93', fontWeight: '600' },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
+  subtitle: { fontSize: 20, fontWeight: '800', color: '#1c1c1e' },
+  addText: { color: '#28a745', fontWeight: 'bold', fontSize: 14 },
   listContainer: { paddingBottom: 20 },
   routineCard: { 
-    backgroundColor: '#fff', padding: 20, borderRadius: 15, marginBottom: 12, 
+    backgroundColor: '#fff', padding: 16, borderRadius: 16, marginBottom: 12, 
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 2
   },
-  routineName: { fontSize: 16, fontWeight: 'bold', color: '#333' },
-  routineDate: { fontSize: 12, color: '#999', marginTop: 4 },
-  arrow: { fontSize: 18, color: '#ccc' },
-  createBtn: { backgroundColor: '#28a745', paddingVertical: 18, borderRadius: 15, alignItems: 'center', marginTop: 10, marginBottom: 20 },
-  btnText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
-  emptyText: { textAlign: 'center', color: '#aaa', marginTop: 40, fontStyle: 'italic' }
+  routineInfo: { flex: 1, paddingVertical: 4 },
+  routineName: { fontSize: 18, fontWeight: '800', color: '#1c1c1e' },
+  routineDate: { fontSize: 11, color: '#8e8e93', marginTop: 2, fontWeight: '600', textTransform: 'uppercase' },
+  cardActions: { flexDirection: 'row', alignItems: 'center' },
+  editIconBtn: { padding: 10, marginRight: 5 },
+  startBtn: { 
+    backgroundColor: '#28a745', 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    paddingHorizontal: 14, 
+    paddingVertical: 8, 
+    borderRadius: 10,
+  },
+  startBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 12, marginLeft: 4 },
+  emptyText: { textAlign: 'center', color: '#8e8e93', marginTop: 10, fontSize: 14, fontStyle: 'italic' }
 });
