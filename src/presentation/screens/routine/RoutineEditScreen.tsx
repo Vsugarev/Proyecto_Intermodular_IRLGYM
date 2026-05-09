@@ -199,7 +199,7 @@ export const RoutineEditScreen = ({ route, navigation }: any) => {
         </TouchableOpacity>
 
         <View style={styles.inputWrapper}>
-          {prevSet && <Text style={styles.previousLabel}>{prevSet.kg}kg</Text>}
+          <Text style={styles.previousLabel}>{prevSet ? `${prevSet.kg}kg` : '-'}</Text>
           <TextInput
             style={styles.setInput}
             keyboardType="numeric"
@@ -211,7 +211,7 @@ export const RoutineEditScreen = ({ route, navigation }: any) => {
         </View>
         
         <View style={styles.inputWrapper}>
-          {prevSet && <Text style={styles.previousLabel}>{prevSet.reps} reps</Text>}
+          <Text style={styles.previousLabel}>{prevSet ? `${prevSet.reps} reps` : '-'}</Text>
           <TextInput
             style={styles.setInput}
             keyboardType="numeric"
@@ -223,7 +223,7 @@ export const RoutineEditScreen = ({ route, navigation }: any) => {
         </View>
 
         <View style={styles.inputWrapper}>
-          {prevSet && prevSet.rpe ? <Text style={styles.previousLabel}>RPE {prevSet.rpe}</Text> : <Text style={styles.previousLabel}>-</Text>}
+          <Text style={styles.previousLabel}>{prevSet && prevSet.rpe ? `RPE ${prevSet.rpe}` : '-'}</Text>
           <TextInput
             style={styles.setInput}
             keyboardType="numeric"
@@ -365,31 +365,32 @@ const styles = StyleSheet.create({
   setTableHeader: { flexDirection: 'row', marginBottom: 8, paddingHorizontal: 4 },
   setTableLabel: { fontSize: 10, fontWeight: 'bold', color: '#8e8e93', textAlign: 'center' },
   setRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  inputWrapper: { flex: 1, marginHorizontal: 4 },
-  previousLabel: { fontSize: 9, color: '#8e8e93', textAlign: 'center', marginBottom: 2, fontWeight: '600' },
+  inputWrapper: { flex: 1, marginHorizontal: 2 },
+  previousLabel: { fontSize: 9, color: '#c7c7cc', textAlign: 'center', marginBottom: 2, fontWeight: '600' },
   setTypeBadge: { 
-    width: 30, 
-    height: 30, 
-    borderRadius: 15, 
+    width: 24, 
+    height: 24, 
+    borderRadius: 12, 
     justifyContent: 'center', 
     alignItems: 'center',
-    marginRight: 10,
+    marginRight: 8,
     backgroundColor: '#eee'
   },
   setType_R: { backgroundColor: '#e5e5ea' },
   setType_W: { backgroundColor: '#ffcc00' },
   setType_D: { backgroundColor: '#af52de' },
   setType_F: { backgroundColor: '#ff3b30' },
-  setTypeText: { fontSize: 12, fontWeight: 'bold', color: '#000' },
+  setTypeText: { fontSize: 10, fontWeight: 'bold', color: '#000' },
   setInput: { 
     flex: 1, 
     backgroundColor: '#f2f2f7', 
-    borderRadius: 8, 
-    height: 35, 
+    borderRadius: 6, 
+    height: 36, 
     textAlign: 'center', 
-    fontSize: 14, 
-    marginHorizontal: 4,
-    fontWeight: '600'
+    fontSize: 15, 
+    fontWeight: '600',
+    color: '#1c1c1e',
+    paddingVertical: 0
   },
   deleteSetBtn: { width: 30, alignItems: 'center', marginLeft: 5 },
   addSetBtn: { 
