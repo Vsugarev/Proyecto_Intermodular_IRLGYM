@@ -12,6 +12,7 @@ import { RoutineEditScreen } from '../screens/routine/RoutineEditScreen';
 import { ExerciseLibraryScreen } from '../screens/routine/ExerciseLibraryScreen';
 import { ExerciseCreateScreen } from '../screens/routine/ExerciseCreateScreen';
 import { ExerciseDetailScreen } from '../screens/routine/ExerciseDetailScreen';
+import { RoutineDetailScreen } from '../screens/routine/RoutineDetailScreen';
 import { AuthScreen } from '../screens/auth/AuthScreen';
 
 const Tab = createBottomTabNavigator();
@@ -25,16 +26,26 @@ const HomeStack = () => {
       <Stack.Screen name="ExerciseLibrary" component={ExerciseLibraryScreen} options={{ title: 'Biblioteca' }} />
       <Stack.Screen name="ExerciseCreate" component={ExerciseCreateScreen} options={{ title: 'Nuevo Ejercicio' }} />
       <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={{ title: 'Detalle de Ejercicio' }} />
+      <Stack.Screen name="RoutineDetail" component={RoutineDetailScreen} options={{ title: 'Detalle de Rutina' }} />
     </Stack.Navigator>
   );
 };
-
 const ExercisesStack = () => {
   return (
     <Stack.Navigator>
       <Stack.Screen name="LibraryMain" component={ExerciseLibraryScreen} options={{ title: 'Biblioteca' }} />
       <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={{ title: 'Detalle de Ejercicio' }} />
       <Stack.Screen name="ExerciseCreate" component={ExerciseCreateScreen} options={{ title: 'Nuevo Ejercicio' }} />
+    </Stack.Navigator>
+  );
+};
+
+const ProfileStack = () => {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen name="ProfileMain" component={ProfileScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="RoutineDetail" component={RoutineDetailScreen} options={{ title: 'Resumen de Entrenamiento' }} />
+      <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={{ title: 'Detalle de Ejercicio' }} />
     </Stack.Navigator>
   );
 };
@@ -87,7 +98,7 @@ export const AppNavigator = () => {
     >
       <Tab.Screen name="Entrenar" component={HomeStack} />
       <Tab.Screen name="Ejercicios" component={ExercisesStack} />
-      <Tab.Screen name="Perfil" component={ProfileScreen} />
+      <Tab.Screen name="Perfil" component={ProfileStack} />
     </Tab.Navigator>
   );
 };

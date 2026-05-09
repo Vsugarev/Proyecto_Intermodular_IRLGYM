@@ -7,7 +7,7 @@ import { auth } from '../../../infrastructure/config/firebase';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 
-export const ProfileScreen = () => {
+export const ProfileScreen = ({ navigation }: any) => {
   const [stats, setStats] = useState<UserStats | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [workouts, setWorkouts] = useState<Workout[]>([]);
@@ -170,7 +170,7 @@ export const ProfileScreen = () => {
             <TouchableOpacity 
               key={workout.id} 
               style={styles.workoutHistoryCard}
-              onPress={() => Alert.alert("Detalles", "Próximamente: Ver resumen del entrenamiento")}
+              onPress={() => navigation.navigate('RoutineDetail', { routineId: workout.id })}
             >
               <View style={styles.workoutIconCircle}>
                 <Ionicons name="checkmark-circle" size={24} color="#28a745" />
