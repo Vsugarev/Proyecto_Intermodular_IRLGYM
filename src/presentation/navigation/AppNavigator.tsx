@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { onAuthStateChanged, User } from 'firebase/auth';
+import { Ionicons } from '@expo/vector-icons';
 import { auth } from '../../infrastructure/config/firebase';
 import { AuthService } from '../../application/service/AuthService';
 
@@ -24,6 +25,16 @@ const HomeStack = () => {
       <Stack.Screen name="ExerciseLibrary" component={ExerciseLibraryScreen} options={{ title: 'Biblioteca' }} />
       <Stack.Screen name="ExerciseCreate" component={ExerciseCreateScreen} options={{ title: 'Nuevo Ejercicio' }} />
       <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={{ title: 'Detalle de Ejercicio' }} />
+    </Stack.Navigator>
+  );
+};
+
+const ExercisesStack = () => {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen name="LibraryMain" component={ExerciseLibraryScreen} options={{ title: 'Biblioteca' }} />
+      <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={{ title: 'Detalle de Ejercicio' }} />
+      <Stack.Screen name="ExerciseCreate" component={ExerciseCreateScreen} options={{ title: 'Nuevo Ejercicio' }} />
     </Stack.Navigator>
   );
 };
@@ -55,8 +66,27 @@ export const AppNavigator = () => {
   }
 
   return (
-    <Tab.Navigator screenOptions={{ headerShown: false }}>
-      <Tab.Screen name="Inicio" component={HomeStack} />
+    <Tab.Navigator 
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName: any;
+          if (route.name === 'Entrenar') {
+            iconName = focused ? 'fitness' : 'fitness-outline';
+          } else if (route.name === 'Ejercicios') {
+            iconName = focused ? 'barbell' : 'barbell-outline';
+          } else if (route.name === 'Perfil') {
+            iconName = focused ? 'person' : 'person-outline';
+          }
+          return <Ionicons name={iconName} size={size} color={color} />;
+        },
+        tabBarActiveTintColor: '#28a745',
+        tabBarInactiveTintColor: 'gray',
+        tabBarStyle: { paddingBottom: 5, height: 60 }
+      })}
+    >
+      <Tab.Screen name="Entrenar" component={HomeStack} />
+      <Tab.Screen name="Ejercicios" component={ExercisesStack} />
       <Tab.Screen name="Perfil" component={ProfileScreen} />
     </Tab.Navigator>
   );
