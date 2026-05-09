@@ -23,8 +23,13 @@ export const WorkoutService = {
     return await WorkoutRepository.findAllByUserId(userId);
   },
 
-  async getWorkoutById(id: string) {
-    return await WorkoutRepository.findById(id);
+  async getWorkoutById(id: string): Promise<Workout | null> {
+    const workout = await WorkoutRepository.findById(id);
+    if (workout) {
+      const logs = await LogRepository.findByWorkoutId(id);
+      return { ...workout, logs };
+    }
+    return null;
   },
 
   async updateWorkout(workout: Workout) {
