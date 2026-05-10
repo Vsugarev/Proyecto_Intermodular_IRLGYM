@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ActivityIndicator, ScrollView, TouchableOpacity, Modal } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ActivityIndicator, ScrollView, TouchableOpacity, Modal, Animated } from 'react-native';
 import { auth } from '../../../infrastructure/config/firebase';
 import { SkillService } from '../../../application/service/SkillService';
 import { UserStats } from '../../../domain/entities/User';
@@ -14,6 +14,8 @@ export const SkillsScreen = () => {
   const [selectedNode, setSelectedNode] = useState<any | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [isUnlocking, setIsUnlocking] = useState(false);
+  const [unlockedNodeId, setUnlockedNodeId] = useState<string | null>(null);
+  const scaleAnim = React.useRef(new Animated.Value(1)).current;
 
   const loadData = async () => {
     if (auth.currentUser) {
@@ -43,8 +45,15 @@ export const SkillsScreen = () => {
     setIsUnlocking(true);
     try {
       await SkillService.unlockSkill(auth.currentUser.uid, selectedNode.id);
-      await loadData(); // Refrescar el árbol
+      const justUnlockedId = selectedNode.id;
+      await loadData();
       setModalVisible(false);
+      setUnlockedNodeId(justUnlockedId);
+      scaleAnim.setValue(1);
+      Animated.sequence([
+        Animated.timing(scaleAnim, { toValue: 1.4, duration: 250, useNativeDriver: true }),
+        Animated.spring(scaleAnim, { toValue: 1, friction: 3, tension: 50, useNativeDriver: true })
+      ]).start(() => setUnlockedNodeId(null));
     } catch (error) {
       console.error("Error al desbloquear habilidad:", error);
     } finally {
@@ -73,8 +82,8 @@ export const SkillsScreen = () => {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <TouchableOpacity 
-              style={styles.closeButton} 
+            <TouchableOpacity
+              style={styles.closeButton}
               onPress={() => setModalVisible(false)}
             >
               <Ionicons name="close" size={24} color="#fff" />
@@ -82,14 +91,14 @@ export const SkillsScreen = () => {
 
             <View style={styles.modalHeader}>
               <View style={[
-                styles.modalIconBg, 
+                styles.modalIconBg,
                 isLocked && { backgroundColor: '#2c2c2e' },
                 isCompleted && { backgroundColor: '#28a745' }
               ]}>
-                <Ionicons 
-                  name={isCompleted ? 'checkmark-circle' : 'flash'} 
-                  size={40} 
-                  color="#fff" 
+                <Ionicons
+                  name={isCompleted ? 'checkmark-circle' : 'flash'}
+                  size={40}
+                  color="#fff"
                 />
               </View>
               <Text style={styles.modalTitle}>{selectedNode.title}</Text>
@@ -127,7 +136,7 @@ export const SkillsScreen = () => {
                   <Text style={styles.completedText}>HABILIDAD OBTENIDA</Text>
                 </View>
               ) : (
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[styles.unlockButton, isLocked && styles.unlockButtonDisabled]}
                   onPress={handleUnlockSkill}
                   disabled={isLocked || isUnlocking}
@@ -156,30 +165,32 @@ export const SkillsScreen = () => {
     return (
       <View key={node.id} style={styles.nodeWrapper}>
         <View style={styles.nodeContainer}>
-          <TouchableOpacity 
-            style={[
-              styles.skillNode,
-              isCompleted && styles.nodeCompleted,
-              isAvailable && styles.nodeAvailable,
-              isLocked && styles.nodeLocked
-            ]}
-            onPress={() => handleNodePress(node)}
-            disabled={isLocked}
-          >
-            <View style={[styles.innerCircle, isLocked && { backgroundColor: '#2c2c2e' }]}>
-              <Ionicons 
-                name={isCompleted ? 'checkmark' : 'flash'} 
-                size={24} 
-                color={isLocked ? '#48484a' : '#fff'} 
-              />
-            </View>
-            
-            {/* Tooltip / Label */}
-            <View style={styles.nodeLabelContainer}>
-              <Text style={[styles.nodeTitle, isLocked && { color: '#8e8e93' }]}>{node.title}</Text>
-              <Text style={styles.nodeXp}>{node.xpReward} XP</Text>
-            </View>
-          </TouchableOpacity>
+          <Animated.View style={node.id === unlockedNodeId ? { transform: [{ scale: scaleAnim }] } : undefined}>
+            <TouchableOpacity
+              style={[
+                styles.skillNode,
+                isCompleted && styles.nodeCompleted,
+                isAvailable && styles.nodeAvailable,
+                isLocked && styles.nodeLocked
+              ]}
+              onPress={() => handleNodePress(node)}
+              disabled={isLocked}
+            >
+              <View style={[styles.innerCircle, isLocked && { backgroundColor: '#2c2c2e' }]}>
+                <Ionicons
+                  name={isCompleted ? 'checkmark' : 'flash'}
+                  size={24}
+                  color={isLocked ? '#48484a' : '#fff'}
+                />
+              </View>
+
+              {/* Tooltip / Label */}
+              <View style={styles.nodeLabelContainer}>
+                <Text style={[styles.nodeTitle, isLocked && { color: '#8e8e93' }]}>{node.title}</Text>
+                <Text style={styles.nodeXp}>{node.xpReward} XP</Text>
+              </View>
+            </TouchableOpacity>
+          </Animated.View>
         </View>
 
         {/* Línea de conexión si no es el último */}
@@ -200,7 +211,7 @@ export const SkillsScreen = () => {
           </View>
           <Text style={styles.branchTitle}>{label}</Text>
         </View>
-        
+
         <View style={styles.treePath}>
           {nodes.map((node, index) => renderNode(node, index === nodes.length - 1))}
         </View>
@@ -219,7 +230,7 @@ export const SkillsScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.darkOverlay} />
-      
+
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Header de Nivel (Requirement Skills-01-1) */}
         <View style={styles.levelHeader}>
@@ -230,7 +241,7 @@ export const SkillsScreen = () => {
             </View>
             <Ionicons name="trophy" size={32} color="#ffd700" />
           </View>
-          
+
           <View style={styles.progressContainer}>
             <View style={styles.progressTrack}>
               <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
