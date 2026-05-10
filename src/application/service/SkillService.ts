@@ -1,5 +1,6 @@
-import { UserStatsRepository } from '../../data/repositories/index';
+import { UserStatsRepository, SkillRepository, ProgressRepository } from '../../data/repositories/index';
 import { UserStats } from '../../domain/entities/User';
+import { SkillNode, UserProgressNode } from '../../domain/entities/SkillNode';
 
 export const SkillService = {
   async getUserStats(userId: string): Promise<UserStats | null> {
@@ -24,5 +25,50 @@ export const SkillService = {
       total += i * 100;
     }
     return total;
+  },
+
+  async getSkillTree(userId: string) {
+    await this.seedSkillsIfEmpty(); // Aseguramos que haya datos
+
+    const allNodes = await SkillRepository.findAll();
+    const userProgress = await ProgressRepository.findAllByUserId(userId);
+
+    return allNodes.map(node => {
+      const progress = userProgress.find(p => p.nodeId === node.id);
+      
+      let status: 'locked' | 'available' | 'completed' = 'locked';
+      
+      if (progress && progress.status === 'completed') {
+        status = 'completed';
+      } else {
+        // Lógica de disponibilidad
+        const isFirstNode = !node.prevNodeId;
+        const prevNodeCompleted = node.prevNodeId ? 
+          userProgress.find(p => p.nodeId === node.prevNodeId)?.status === 'completed' : false;
+
+        if (isFirstNode || prevNodeCompleted) {
+          status = 'available';
+        }
+      }
+
+      return {
+        ...node,
+        status
+      };
+    });
+  },
+
+  async seedSkillsIfEmpty() {
+    const existing = await SkillRepository.findAll();
+    if (existing.length === 0) {
+      const initialSkills: SkillNode[] = [
+        { id: 'sk_1', title: 'Fundamentos de Fuerza', branch: 'base', requirementsJson: '{"level": 1}', prevNodeId: null, xpReward: 50 },
+        { id: 'sk_2', title: 'Técnica de Sentadilla', branch: 'base', requirementsJson: '{"level": 2}', prevNodeId: 'sk_1', xpReward: 100 },
+        { id: 'sk_3', title: 'Powerlifting Base', branch: 'base', requirementsJson: '{"level": 5}', prevNodeId: 'sk_2', xpReward: 200 },
+        { id: 'sk_4', title: 'Calistenia Inicial', branch: 'calisthenics', requirementsJson: '{"level": 1}', prevNodeId: null, xpReward: 50 },
+        { id: 'sk_5', title: 'Dominio de Pull-up', branch: 'calisthenics', requirementsJson: '{"level": 3}', prevNodeId: 'sk_4', xpReward: 100 },
+      ];
+      await SkillRepository.saveAll(initialSkills);
+    }
   }
 };
