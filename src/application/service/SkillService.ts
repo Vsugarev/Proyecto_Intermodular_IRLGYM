@@ -58,6 +58,17 @@ export const SkillService = {
     });
   },
 
+  async unlockSkill(userId: string, skillId: string) {
+    // En un caso real, aquí validaríamos requisitos y XP consumida
+    // Por ahora, simplemente persistimos el nodo como completado
+    await ProgressRepository.save({
+      userId,
+      nodeId: skillId,
+      status: 'completed',
+      unlockedAt: new Date().toISOString()
+    });
+  },
+
   async seedSkillsIfEmpty() {
     const existing = await SkillRepository.findAll();
     if (existing.length === 0) {

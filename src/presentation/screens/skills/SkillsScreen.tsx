@@ -13,6 +13,7 @@ export const SkillsScreen = () => {
   const [progress, setProgress] = useState(0);
   const [selectedNode, setSelectedNode] = useState<any | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [isUnlocking, setIsUnlocking] = useState(false);
 
   const loadData = async () => {
     if (auth.currentUser) {
@@ -34,6 +35,21 @@ export const SkillsScreen = () => {
   const handleNodePress = (node: any) => {
     setSelectedNode(node);
     setModalVisible(true);
+  };
+
+  const handleUnlockSkill = async () => {
+    if (!selectedNode || !auth.currentUser) return;
+
+    setIsUnlocking(true);
+    try {
+      await SkillService.unlockSkill(auth.currentUser.uid, selectedNode.id);
+      await loadData(); // Refrescar el árbol
+      setModalVisible(false);
+    } catch (error) {
+      console.error("Error al desbloquear habilidad:", error);
+    } finally {
+      setIsUnlocking(false);
+    }
   };
 
   useFocusEffect(
@@ -113,11 +129,16 @@ export const SkillsScreen = () => {
               ) : (
                 <TouchableOpacity 
                   style={[styles.unlockButton, isLocked && styles.unlockButtonDisabled]}
-                  disabled={isLocked}
+                  onPress={handleUnlockSkill}
+                  disabled={isLocked || isUnlocking}
                 >
-                  <Text style={styles.unlockButtonText}>
-                    {isLocked ? 'BLOQUEADO' : 'DESBLOQUEAR NODO'}
-                  </Text>
+                  {isUnlocking ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={styles.unlockButtonText}>
+                      {isLocked ? 'BLOQUEADO' : 'DESBLOQUEAR NODO'}
+                    </Text>
+                  )}
                 </TouchableOpacity>
               )}
             </View>
