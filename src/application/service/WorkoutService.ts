@@ -1,5 +1,5 @@
 import { WorkoutRepository, LogRepository } from '../../data/repositories/index';
-import { Workout } from '../../domain/entities/Workout';
+import { Workout, Set } from '../../domain/entities/Workout';
 import { LogService } from './LogService';
 
 export const WorkoutService = {
@@ -107,7 +107,7 @@ export const WorkoutService = {
         id: `log_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
         workoutId: newWorkout.id,
         // Respetamos el NÚMERO de series de la plantilla, pero rellenamos con valores previos
-        series: log.series.map((s, idx) => {
+        series: log.series.map((s: Set, idx: number) => {
           const lastSeries = lastRealLog?.series[idx];
           return {
             ...s,

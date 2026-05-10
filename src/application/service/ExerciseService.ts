@@ -1,5 +1,6 @@
 import { ExerciseRepository, LogRepository } from '../../data/repositories/index';
 import { LibraryExercise } from '../../domain/entities/LibraryExercise';
+import { WorkoutLog, Set } from '../../domain/entities/Workout';
 
 export const ExerciseService = {
   async getAll(): Promise<LibraryExercise[]> {
@@ -49,7 +50,7 @@ export const ExerciseService = {
     const logs = await LogRepository.findByExerciseId(exerciseId);
     
     // Traemos info del workout para filtrar (Clean Architecture: lógica de negocio en servicio)
-    const logsWithWorkoutInfo = await Promise.all(logs.map(async (log) => {
+    const logsWithWorkoutInfo = await Promise.all(logs.map(async (log: WorkoutLog) => {
       const { WorkoutRepository } = require('../../data/repositories/index');
       const workout = await WorkoutRepository.findById(log.workoutId);
       return {
@@ -72,12 +73,12 @@ export const ExerciseService = {
 
     // Cálculos de récords
     const maxWeight = history.reduce((max, log) => {
-      const logMax = log.series.length > 0 ? Math.max(...log.series.map(s => s.kg || 0)) : 0;
+      const logMax = log.series.length > 0 ? Math.max(...log.series.map((s: Set) => s.kg || 0)) : 0;
       return Math.max(max, logMax);
     }, 0);
 
     const estimated1RM = history.reduce((max, log) => {
-      const logMax1RM = log.series.length > 0 ? Math.max(...log.series.map(s => {
+      const logMax1RM = log.series.length > 0 ? Math.max(...log.series.map((s: Set) => {
         if (s.reps > 1) return s.kg * (1 + 0.0333 * s.reps);
         return s.kg;
       })) : 0;
@@ -85,7 +86,7 @@ export const ExerciseService = {
     }, 0);
 
     const maxVolume = history.reduce((max, log) => {
-      const logVolume = log.series.reduce((sum, s) => sum + (s.kg * s.reps), 0);
+      const logVolume = log.series.reduce((sum: number, s: Set) => sum + (s.kg * s.reps), 0);
       return Math.max(max, logVolume);
     }, 0);
 

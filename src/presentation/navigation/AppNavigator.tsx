@@ -14,6 +14,7 @@ import { ExerciseCreateScreen } from '../screens/routine/ExerciseCreateScreen';
 import { ExerciseDetailScreen } from '../screens/routine/ExerciseDetailScreen';
 import { RoutineDetailScreen } from '../screens/routine/RoutineDetailScreen';
 import { AuthScreen } from '../screens/auth/AuthScreen';
+import { SkillsScreen } from '../screens/skills/SkillsScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -47,6 +48,15 @@ const ProfileStack = () => {
       <Stack.Screen name="RoutineDetail" component={RoutineDetailScreen} options={{ title: 'Resumen de Entrenamiento' }} />
       <Stack.Screen name="EditRoutine" component={RoutineEditScreen} options={{ title: 'Editar Rutina' }} />
       <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={{ title: 'Detalle de Ejercicio' }} />
+    </Stack.Navigator>
+  );
+};
+
+
+const SkillsStack = () => {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen name="SkillsMain" component={SkillsScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 };
@@ -89,6 +99,8 @@ export const AppNavigator = () => {
             iconName = focused ? 'barbell' : 'barbell-outline';
           } else if (route.name === 'Perfil') {
             iconName = focused ? 'person' : 'person-outline';
+          } else if (route.name === 'Progreso') {
+            iconName = focused ? 'trophy' : 'trophy-outline';
           }
           return <Ionicons name={iconName} size={size} color={color} />;
         },
@@ -99,6 +111,7 @@ export const AppNavigator = () => {
     >
       <Tab.Screen name="Entrenar" component={HomeStack} />
       <Tab.Screen name="Ejercicios" component={ExercisesStack} />
+      <Tab.Screen name="Progreso" component={SkillsStack} />
       <Tab.Screen name="Perfil" component={ProfileStack} />
     </Tab.Navigator>
   );
