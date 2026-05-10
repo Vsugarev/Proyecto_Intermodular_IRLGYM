@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ActivityIndicator, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ActivityIndicator, ScrollView, TouchableOpacity, Modal } from 'react-native';
 import { auth } from '../../../infrastructure/config/firebase';
 import { SkillService } from '../../../application/service/SkillService';
 import { UserStats } from '../../../domain/entities/User';
@@ -11,6 +11,8 @@ export const SkillsScreen = () => {
   const [tree, setTree] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState(0);
+  const [selectedNode, setSelectedNode] = useState<any | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
 
   const loadData = async () => {
     if (auth.currentUser) {
@@ -29,11 +31,101 @@ export const SkillsScreen = () => {
     }
   };
 
+  const handleNodePress = (node: any) => {
+    setSelectedNode(node);
+    setModalVisible(true);
+  };
+
   useFocusEffect(
     React.useCallback(() => {
       loadData();
     }, [])
   );
+
+  const renderNodeModal = () => {
+    if (!selectedNode) return null;
+
+    const isLocked = selectedNode.status === 'locked';
+    const isCompleted = selectedNode.status === 'completed';
+
+    return (
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <TouchableOpacity 
+              style={styles.closeButton} 
+              onPress={() => setModalVisible(false)}
+            >
+              <Ionicons name="close" size={24} color="#fff" />
+            </TouchableOpacity>
+
+            <View style={styles.modalHeader}>
+              <View style={[
+                styles.modalIconBg, 
+                isLocked && { backgroundColor: '#2c2c2e' },
+                isCompleted && { backgroundColor: '#28a745' }
+              ]}>
+                <Ionicons 
+                  name={isCompleted ? 'checkmark-circle' : 'flash'} 
+                  size={40} 
+                  color="#fff" 
+                />
+              </View>
+              <Text style={styles.modalTitle}>{selectedNode.title}</Text>
+              <Text style={styles.modalBranch}>{selectedNode.branch.toUpperCase()}</Text>
+            </View>
+
+            <View style={styles.infoSection}>
+              <View style={styles.infoCard}>
+                <Ionicons name="star" size={20} color="#ffd700" />
+                <View>
+                  <Text style={styles.infoLabel}>RECOMPENSA</Text>
+                  <Text style={styles.infoValue}>{selectedNode.xpReward} XP</Text>
+                </View>
+              </View>
+
+              <View style={styles.infoCard}>
+                <Ionicons name="shield" size={20} color="#007aff" />
+                <View>
+                  <Text style={styles.infoLabel}>REQUISITOS</Text>
+                  <Text style={styles.infoValue}>
+                    {JSON.parse(selectedNode.requirementsJson).level ? `Nivel ${JSON.parse(selectedNode.requirementsJson).level}` : 'Ninguno'}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            <Text style={styles.descriptionText}>
+              Desbloquea esta habilidad para potenciar tu entrenamiento y ganar experiencia adicional en la senda de {selectedNode.branch}.
+            </Text>
+
+            <View style={styles.modalFooter}>
+              {isCompleted ? (
+                <View style={styles.completedBadge}>
+                  <Ionicons name="checkmark-done" size={20} color="#fff" />
+                  <Text style={styles.completedText}>HABILIDAD OBTENIDA</Text>
+                </View>
+              ) : (
+                <TouchableOpacity 
+                  style={[styles.unlockButton, isLocked && styles.unlockButtonDisabled]}
+                  disabled={isLocked}
+                >
+                  <Text style={styles.unlockButtonText}>
+                    {isLocked ? 'BLOQUEADO' : 'DESBLOQUEAR NODO'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
 
   const renderNode = (node: any, isLast: boolean) => {
     const isCompleted = node.status === 'completed';
@@ -50,6 +142,7 @@ export const SkillsScreen = () => {
               isAvailable && styles.nodeAvailable,
               isLocked && styles.nodeLocked
             ]}
+            onPress={() => handleNodePress(node)}
             disabled={isLocked}
           >
             <View style={[styles.innerCircle, isLocked && { backgroundColor: '#2c2c2e' }]}>
@@ -132,6 +225,7 @@ export const SkillsScreen = () => {
           {renderBranch('calisthenics', 'body', 'Senda del Control')}
         </View>
       </ScrollView>
+      {renderNodeModal()}
     </SafeAreaView>
   );
 };
@@ -324,5 +418,130 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: 'rgba(255,255,255,0.1)',
     marginVertical: 40,
-  }
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.85)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#1c1c1e',
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    padding: 30,
+    paddingBottom: 50,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  closeButton: {
+    alignSelf: 'flex-end',
+    padding: 10,
+    backgroundColor: '#2c2c2e',
+    borderRadius: 20,
+  },
+  modalHeader: {
+    alignItems: 'center',
+    marginTop: 10,
+    marginBottom: 30,
+  },
+  modalIconBg: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#007aff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 15,
+    shadowColor: '#007aff',
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  modalTitle: {
+    color: '#fff',
+    fontSize: 26,
+    fontWeight: '900',
+    textAlign: 'center',
+  },
+  modalBranch: {
+    color: '#8e8e93',
+    fontSize: 12,
+    fontWeight: 'bold',
+    letterSpacing: 2,
+    marginTop: 5,
+  },
+  infoSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 30,
+    gap: 15,
+  },
+  infoCard: {
+    flex: 1,
+    backgroundColor: '#2c2c2e',
+    borderRadius: 15,
+    padding: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  infoLabel: {
+    color: '#8e8e93',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  infoValue: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  descriptionText: {
+    color: '#d1d1d6',
+    fontSize: 15,
+    lineHeight: 22,
+    textAlign: 'center',
+    marginBottom: 40,
+  },
+  modalFooter: {
+    alignItems: 'center',
+  },
+  unlockButton: {
+    backgroundColor: '#28a745',
+    paddingVertical: 18,
+    paddingHorizontal: 40,
+    borderRadius: 15,
+    width: '100%',
+    alignItems: 'center',
+    shadowColor: '#28a745',
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  unlockButtonDisabled: {
+    backgroundColor: '#3a3a3c',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  unlockButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
+  completedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(40, 167, 69, 0.2)',
+    paddingVertical: 12,
+    paddingHorizontal: 25,
+    borderRadius: 25,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: '#28a745',
+  },
+  completedText: {
+    color: '#28a745',
+    fontSize: 14,
+    fontWeight: '900',
+  },
 });
