@@ -7,6 +7,24 @@ export const SkillService = {
     return await UserStatsRepository.findByUserId(userId);
   },
 
+  async addExperience(userId: string, xpAmount: number): Promise<void> {
+    let stats = await UserStatsRepository.findByUserId(userId);
+    if (!stats) {
+      stats = { userId, level: 1, currentXp: 0, streakCount: 0 };
+    }
+    
+    stats.currentXp += xpAmount;
+    
+    // Verificamos si hay subida de nivel
+    let nextLevelBaseXP = this.getXPForLevel(stats.level + 1);
+    while (stats.currentXp >= nextLevelBaseXP) {
+      stats.level += 1;
+      nextLevelBaseXP = this.getXPForLevel(stats.level + 1);
+    }
+    
+    await UserStatsRepository.save(stats);
+  },
+
   // Calculamos el progreso porcentual para el siguiente nivel
   // Por simplicidad FP: cada nivel requiere (nivel * 100) XP adicionales
   calculateLevelProgress(xp: number, level: number): number {
@@ -59,14 +77,30 @@ export const SkillService = {
   },
 
   async unlockSkill(userId: string, skillId: string) {
-    // En un caso real, aquí validaríamos requisitos y XP consumida
-    // Por ahora, simplemente persistimos el nodo como completado
+    // Verificamos si ya está desbloqueada
+    const userProgress = await ProgressRepository.findAllByUserId(userId);
+    const existingProgress = userProgress.find(p => p.nodeId === skillId);
+    
+    if (existingProgress && existingProgress.status === 'completed') {
+      return; // Ya está desbloqueada
+    }
+
+    // Buscamos el nodo para obtener la recompensa
+    const allNodes = await SkillRepository.findAll();
+    const node = allNodes.find(n => n.id === skillId);
+
+    // Persistimos el nodo como completado
     await ProgressRepository.save({
       userId,
       nodeId: skillId,
       status: 'completed',
       unlockedAt: new Date().toISOString()
     });
+
+    // Otorgamos la experiencia correspondiente al usuario
+    if (node && node.xpReward) {
+      await this.addExperience(userId, node.xpReward);
+    }
   },
 
   async seedSkillsIfEmpty() {

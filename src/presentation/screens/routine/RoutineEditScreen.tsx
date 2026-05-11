@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { WorkoutService } from '../../../application/service/WorkoutService';
 import { LogService } from '../../../application/service/LogService';
 import { ExerciseService } from '../../../application/service/ExerciseService';
+import { SkillService } from '../../../application/service/SkillService';
 import { WorkoutLog, Set } from '../../../domain/entities/Workout';
 
 interface ExerciseWithLog extends WorkoutLog {
@@ -84,6 +85,12 @@ export const RoutineEditScreen = ({ route, navigation }: { route: any, navigatio
       await WorkoutService.updateWorkout({ ...routine, name, status: updatedStatus });
       for (const log of exercises) {
         await LogService.saveLog(log);
+      }
+
+      // Añadimos experiencia si la rutina se acaba de completar
+      if (routine?.status === 'in_progress' && updatedStatus === 'completed' && routine.userId) {
+        const xpEarned = 100 + (exercises.length * 20); // 100 XP base + 20 XP por ejercicio
+        await SkillService.addExperience(routine.userId, xpEarned);
       }
 
       // 2. Si el usuario quiere que esta sea su nueva "plantilla" predeterminada

@@ -16,6 +16,7 @@ export const SkillsScreen = () => {
   const [isUnlocking, setIsUnlocking] = useState(false);
   const [unlockedNodeId, setUnlockedNodeId] = useState<string | null>(null);
   const scaleAnim = React.useRef(new Animated.Value(1)).current;
+  const progressAnim = React.useRef(new Animated.Value(0)).current;
 
   const loadData = async () => {
     if (auth.currentUser) {
@@ -27,7 +28,13 @@ export const SkillsScreen = () => {
 
       if (userStats) {
         setStats(userStats);
-        setProgress(SkillService.calculateLevelProgress(userStats.currentXp, userStats.level));
+        const newProgress = SkillService.calculateLevelProgress(userStats.currentXp, userStats.level);
+        setProgress(newProgress);
+        Animated.timing(progressAnim, {
+          toValue: newProgress,
+          duration: 1200,
+          useNativeDriver: false
+        }).start();
       }
       setTree(skillTree);
       setLoading(false);
@@ -244,7 +251,15 @@ export const SkillsScreen = () => {
 
           <View style={styles.progressContainer}>
             <View style={styles.progressTrack}>
-              <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
+              <Animated.View style={[
+                styles.progressFill, 
+                { 
+                  width: progressAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['0%', '100%']
+                  })
+                }
+              ]} />
             </View>
             <Text style={styles.progressPercent}>{Math.round(progress * 100)}%</Text>
           </View>
