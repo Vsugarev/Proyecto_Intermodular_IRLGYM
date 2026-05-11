@@ -76,7 +76,7 @@ export const SkillService = {
     });
   },
 
-  async unlockSkill(userId: string, skillId: string) {
+  async unlockSkill(userId: string, skillId: string): Promise<{ effect: string } | void> {
     // Verificamos si ya está desbloqueada
     const userProgress = await ProgressRepository.findAllByUserId(userId);
     const existingProgress = userProgress.find(p => p.nodeId === skillId);
@@ -94,13 +94,54 @@ export const SkillService = {
       userId,
       nodeId: skillId,
       status: 'completed',
-      unlockedAt: new Date().toISOString()
+      currentProgress: 100
     });
 
     // Otorgamos la experiencia correspondiente al usuario
     if (node && node.xpReward) {
       await this.addExperience(userId, node.xpReward);
     }
+
+    // Aplicamos los cambios/mejoras (Skills-04)
+    let effectMessage = '';
+    const { WorkoutService } = require('./WorkoutService');
+    const { LogService } = require('./LogService');
+
+    const createTemplateWithExercises = async (name: string, exerciseIds: string[]) => {
+      const template = await WorkoutService.createEmptyTemplate(userId, name);
+      for (let i = 0; i < exerciseIds.length; i++) {
+        await LogService.createLog(template.id, exerciseIds[i], [
+          { kg: 0, reps: 0, type: 'R', rpe: 0 },
+          { kg: 0, reps: 0, type: 'R', rpe: 0 },
+          { kg: 0, reps: 0, type: 'R', rpe: 0 }
+        ]);
+      }
+    };
+
+    switch (skillId) {
+      case 'sk_1':
+        await createTemplateWithExercises('Rutina: Fundamentos de Fuerza', ['ex_1', 'ex_2', 'ex_3']);
+        effectMessage = 'Nueva rutina desbloqueada: Fundamentos de Fuerza';
+        break;
+      case 'sk_2':
+        effectMessage = 'Consejo avanzado: Mantén el core apretado y las rodillas alineadas en la sentadilla.';
+        break;
+      case 'sk_3':
+        await createTemplateWithExercises('Rutina: Powerlifting Base', ['ex_2', 'ex_1', 'ex_3', 'ex_4']);
+        effectMessage = 'Nueva rutina desbloqueada: Powerlifting Base';
+        break;
+      case 'sk_4':
+        await createTemplateWithExercises('Rutina: Calistenia Inicial', ['ex_5']);
+        effectMessage = 'Nueva rutina desbloqueada: Calistenia Inicial';
+        break;
+      case 'sk_5':
+        effectMessage = 'Consejo avanzado: Intenta retraer las escápulas antes de tirar en la dominada.';
+        break;
+      default:
+        effectMessage = 'Has ganado experiencia y mejorado tus habilidades.';
+    }
+
+    return { effect: effectMessage };
   },
 
   async seedSkillsIfEmpty() {

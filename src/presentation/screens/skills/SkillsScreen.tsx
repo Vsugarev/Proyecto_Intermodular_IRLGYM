@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ActivityIndicator, ScrollView, TouchableOpacity, Modal, Animated } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ActivityIndicator, ScrollView, TouchableOpacity, Modal, Animated, Alert } from 'react-native';
 import { auth } from '../../../infrastructure/config/firebase';
 import { SkillService } from '../../../application/service/SkillService';
 import { UserStats } from '../../../domain/entities/User';
@@ -51,7 +51,7 @@ export const SkillsScreen = () => {
 
     setIsUnlocking(true);
     try {
-      await SkillService.unlockSkill(auth.currentUser.uid, selectedNode.id);
+      const result = await SkillService.unlockSkill(auth.currentUser.uid, selectedNode.id);
       const justUnlockedId = selectedNode.id;
       await loadData();
       setModalVisible(false);
@@ -61,6 +61,11 @@ export const SkillsScreen = () => {
         Animated.timing(scaleAnim, { toValue: 1.4, duration: 250, useNativeDriver: true }),
         Animated.spring(scaleAnim, { toValue: 1, friction: 3, tension: 50, useNativeDriver: true })
       ]).start(() => setUnlockedNodeId(null));
+
+      if (result && result.effect) {
+        // Mostramos el consejo o la confirmación de la nueva rutina
+        Alert.alert("Mejora Desbloqueada", result.effect);
+      }
     } catch (error) {
       console.error("Error al desbloquear habilidad:", error);
     } finally {
