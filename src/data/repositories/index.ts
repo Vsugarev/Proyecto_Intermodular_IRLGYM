@@ -10,6 +10,8 @@ import { FirebaseWorkoutRepository } from './firebase/FirebaseWorkoutRepository'
 import { FirebaseLogRepository } from './firebase/FirebaseLogRepository';
 import { FirebaseUserStatsRepository } from './firebase/FirebaseUserStatsRepository';
 import { FirebaseUserProfileRepository } from './firebase/FirebaseUserProfileRepository';
+import { FirebaseProgressRepository } from './firebase/FirebaseProgressRepository';
+import { FirebaseExerciseRepository } from './firebase/FirebaseExerciseRepository';
 
 class HybridRepository {
   constructor(private local: any, private cloud: any) {}
@@ -81,7 +83,11 @@ export const UserProfileRepository = new HybridRepository(new SQLiteUserProfileR
 
 export const CloudUserProfileRepository = new FirebaseUserProfileRepository();
 export const CloudUserStatsRepository = new FirebaseUserStatsRepository();
+export const CloudProgressRepository = new FirebaseProgressRepository();
+export const CloudExerciseRepository = new FirebaseExerciseRepository();
+export const CloudWorkoutRepository = new FirebaseWorkoutRepository();
+export const CloudLogRepository = new FirebaseLogRepository();
 
 export const ExerciseRepository = new SQLiteExerciseRepository();
 export const SkillRepository = new SQLiteSkillRepository();
-export const ProgressRepository = new SQLiteProgressRepository();
+export const ProgressRepository = new HybridRepository(new SQLiteProgressRepository(), new FirebaseProgressRepository());

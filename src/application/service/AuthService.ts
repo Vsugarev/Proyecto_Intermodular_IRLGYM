@@ -65,21 +65,47 @@ export class AuthService {
 
   static async syncUserToLocal(uid: string) {
     try {
-      // Importación dinámica o uso de los exportados para evitar ciclos si los hubiera
-      const { CloudUserProfileRepository, CloudUserStatsRepository } = require('../../data/repositories/index');
+      const { 
+        CloudUserProfileRepository, 
+        CloudUserStatsRepository, 
+        CloudProgressRepository,
+        CloudWorkoutRepository,
+        CloudLogRepository,
+        ProgressRepository,
+        WorkoutRepository,
+        LogRepository
+      } = require('../../data/repositories/index');
       
-      const cloudProfile = await CloudUserProfileRepository.findById(uid);
-      const cloudStats = await CloudUserStatsRepository.findByUserId(uid);
+      const [cloudProfile, cloudStats, cloudProgress, cloudWorkouts] = await Promise.all([
+        CloudUserProfileRepository.findById(uid),
+        CloudUserStatsRepository.findByUserId(uid),
+        CloudProgressRepository.findAllByUserId(uid),
+        CloudWorkoutRepository.findAllByUserId(uid)
+      ]);
       
-      if (cloudProfile) {
-        await UserProfileRepository.save(cloudProfile);
-      } else {
-        // Si no hay perfil en la nube (ej. primer login tras registro incompleto), creamos uno básico
-        await UserProfileRepository.save({ id: uid, username: 'Guerrero', avatarUrl: '' });
+      if (cloudProfile) await UserProfileRepository.save(cloudProfile);
+      else await UserProfileRepository.save({ id: uid, username: 'Guerrero', avatarUrl: '' });
+
+      if (cloudStats) await UserStatsRepository.save(cloudStats);
+
+      // Sincronizar Progreso (Nodos)
+      if (cloudProgress && cloudProgress.length > 0) {
+        for (const p of cloudProgress) {
+          await ProgressRepository.save(p);
+        }
       }
 
-      if (cloudStats) {
-        await UserStatsRepository.save(cloudStats);
+      // Sincronizar Rutinas y sus Logs
+      if (cloudWorkouts && cloudWorkouts.length > 0) {
+        for (const w of cloudWorkouts) {
+          await WorkoutRepository.save(w);
+          const logs = await CloudLogRepository.findByWorkoutId(w.id);
+          if (logs && logs.length > 0) {
+            for (const l of logs) {
+              await LogRepository.save(l);
+            }
+          }
+        }
       }
     } catch (e) {
       console.warn("Error de sincronización inicial:", e);
