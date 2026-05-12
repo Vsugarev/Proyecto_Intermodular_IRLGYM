@@ -94,7 +94,7 @@ export const SkillService = {
       if (req.exercises && Array.isArray(req.exercises)) {
         for (const exReq of req.exercises) {
           const exercise = await ExerciseRepository.findById(exReq.id);
-          const logs = await LogRepository.findByExerciseId(exReq.id);
+          const logs = await LogRepository.findByExerciseId(exReq.id, userId);
           const userLogs = logs.filter((l: any) => userWorkoutIds.has(l.workoutId));
           const totalSeries = userLogs.reduce((acc: number, l: any) => acc + (l.series?.length || 0), 0);
           details.push({ label: `Sets: ${exercise?.name || 'Ej'}`, current: totalSeries, required: exReq.sets, met: totalSeries >= exReq.sets, unit: 'ser' });
@@ -104,7 +104,7 @@ export const SkillService = {
       if (req.weights && Array.isArray(req.weights)) {
         for (const wReq of req.weights) {
           const exercise = await ExerciseRepository.findById(wReq.id);
-          const logs = await LogRepository.findByExerciseId(wReq.id);
+          const logs = await LogRepository.findByExerciseId(wReq.id, userId);
           const userLogs = logs.filter((l: any) => userWorkoutIds.has(l.workoutId));
           let maxWeight = 0;
           userLogs.forEach((l: any) => l.series.forEach((s: any) => { if (s.kg > maxWeight) maxWeight = s.kg; }));
