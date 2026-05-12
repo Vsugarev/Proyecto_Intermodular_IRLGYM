@@ -1,32 +1,44 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, FlatList } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, FlatList, ActivityIndicator, Animated } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { WorkoutService } from '../../../application/service/WorkoutService';
+import { SkillService } from '../../../application/service/SkillService';
 import { auth } from '../../../infrastructure/config/firebase';
 import { Workout } from '../../../domain/entities/Workout';
 
 export const HomeScreen = ({ navigation }: { navigation: any }) => {
   const [templates, setTemplates] = useState<Workout[]>([]);
+  const [skillProgress, setSkillProgress] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const progressAnim = React.useRef(new Animated.Value(0)).current;
 
   useFocusEffect(
     useCallback(() => {
       const user = auth.currentUser;
       if (user) {
-        loadWorkouts(user.uid);
+        loadAllData(user.uid);
       } else {
         setLoading(false);
       }
     }, [])
   );
 
-  const loadWorkouts = async (uid: string) => {
-    if (!uid) return;
+  const loadAllData = async (uid: string) => {
     try {
       setLoading(true);
-      const data = await WorkoutService.getWorkoutsByUser(uid);
-      setTemplates(data.filter((w: Workout) => w.isTemplate));
+      const [workouts, skills] = await Promise.all([
+        WorkoutService.getWorkoutsByUser(uid),
+        SkillService.getHomeProgress(uid)
+      ]);
+      setTemplates(workouts.filter((w: Workout) => w.isTemplate));
+      setSkillProgress(skills);
+      
+      Animated.timing(progressAnim, {
+        toValue: skills.overallProgress,
+        duration: 1000,
+        useNativeDriver: false
+      }).start();
     } catch (e) {
       console.error(e);
     } finally {
@@ -36,17 +48,12 @@ export const HomeScreen = ({ navigation }: { navigation: any }) => {
 
   const handleCreateNew = async () => {
     const user = auth.currentUser;
-    if (!user) {
-      Alert.alert("Error", "Debes estar identificado");
-      return;
-    }
-
+    if (!user) return;
     try {
-      const defaultName = "Nueva Rutina";
-      const newRoutine = await WorkoutService.createEmptyTemplate(user.uid, defaultName);
+      const newRoutine = await WorkoutService.createEmptyTemplate(user.uid, "Nueva Rutina");
       navigation.navigate('EditRoutine', { routine: newRoutine });
     } catch (e: any) {
-      Alert.alert("Error", e.message || "No se pudo crear la rutina");
+      Alert.alert("Error", e.message || "No se pudo crear");
     }
   };
 
@@ -57,66 +64,132 @@ export const HomeScreen = ({ navigation }: { navigation: any }) => {
       const session = await WorkoutService.duplicateRoutine(routineId, user.uid);
       navigation.navigate('EditRoutine', { routine: session });
     } catch (e) {
-      console.error(e);
-      Alert.alert("Error", "No se pudo iniciar el entrenamiento");
+      Alert.alert("Error", "No se pudo iniciar");
     }
   };
 
-  const renderRoutineItem = ({ item }: { item: Workout }) => (
-    <View style={styles.routineCard}>
+  const renderSkillWidget = () => {
+    if (!skillProgress) return null;
+    const { nextNode, completedCount, totalCount } = skillProgress;
+
+    return (
       <TouchableOpacity 
-        style={styles.routineInfo} 
+        style={styles.skillWidget} 
+        onPress={() => navigation.navigate('Skills')}
+        activeOpacity={0.9}
+      >
+        <View style={styles.widgetHeader}>
+          <View style={styles.widgetTitleRow}>
+            <View style={styles.trophyBg}>
+              <Ionicons name="trophy" size={18} color="#ffd700" />
+            </View>
+            <Text style={styles.widgetTitle}>Progreso de Guerrero</Text>
+          </View>
+          <Text style={styles.countText}>{completedCount}/{totalCount} Nodos</Text>
+        </View>
+
+        <View style={styles.mainProgressContainer}>
+          <View style={styles.progressTrack}>
+            <Animated.View style={[
+              styles.progressFill, 
+              { 
+                width: progressAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: ['0%', '100%']
+                })
+              }
+            ]} />
+          </View>
+        </View>
+
+        {nextNode ? (
+          <View style={styles.nextSkillCard}>
+            <View style={styles.nextInfo}>
+              <Text style={styles.nextLabel}>SIGUIENTE OBJETIVO:</Text>
+              <Text style={styles.nextNodeTitle}>{nextNode.title}</Text>
+            </View>
+            <View style={styles.reqSummary}>
+              {nextNode.requirementDetails?.slice(0, 2).map((req: any, idx: number) => (
+                <View key={idx} style={styles.reqMiniRow}>
+                  <Ionicons 
+                    name={req.met ? "checkmark-circle" : "ellipse-outline"} 
+                    size={12} 
+                    color={req.met ? "#28a745" : "#8e8e93"} 
+                  />
+                  <Text style={[styles.reqMiniText, req.met && styles.reqMetText]}>
+                    {req.label} ({req.current}/{req.required}{req.unit})
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        ) : (
+          <Text style={styles.allDoneText}>¡Has dominado todas las sendas!</Text>
+        )}
+      </TouchableOpacity>
+    );
+  };
+
+  const renderRoutineItem = ({ item }: { item: Workout }) => (
+    <TouchableOpacity 
+      key={item.id}
+      style={styles.routineCard} 
+      onPress={() => handleStartRoutine(item.id)}
+      activeOpacity={0.7}
+    >
+      <View style={styles.routineInfo}>
+        <Text style={styles.routineName}>{item.name}</Text>
+        <View style={styles.routineMeta}>
+          <Ionicons name="calendar-outline" size={12} color="#8e8e93" />
+          <Text style={styles.routineDate}>{new Date(item.date).toLocaleDateString()}</Text>
+        </View>
+      </View>
+      
+      <TouchableOpacity 
+        style={styles.startIconBtn} 
         onPress={() => handleStartRoutine(item.id)}
       >
-        <Text style={styles.routineName}>{item.name || "Sin nombre"}</Text>
-        <Text style={styles.routineDate}>Creada el {new Date(item.date).toLocaleDateString()}</Text>
+        <Ionicons name="play" size={24} color="#28a745" />
       </TouchableOpacity>
-      
-      <View style={styles.cardActions}>
-        <TouchableOpacity 
-          style={styles.editIconBtn} 
-          onPress={() => navigation.navigate('EditRoutine', { routine: item })}
-        >
-          <Ionicons name="create-outline" size={20} color="#8e8e93" />
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={styles.startBtn} 
-          onPress={() => handleStartRoutine(item.id)}
-        >
-          <Ionicons name="play" size={18} color="#fff" />
-          <Text style={styles.startBtnText}>ENTRENAR</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+    </TouchableOpacity>
   );
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Panel de Guerrero</Text>
-        <Text style={styles.userText}>{auth.currentUser?.email}</Text>
+        <View>
+          <Text style={styles.welcomeText}>¡Hola!</Text>
+          <Text style={styles.title}>Panel de Guerrero</Text>
+        </View>
+        <TouchableOpacity style={styles.profileIcon}>
+          <Ionicons name="person-circle" size={40} color="#1c1c1e" />
+        </TouchableOpacity>
       </View>
       
+      {loading && <ActivityIndicator style={{ marginBottom: 20 }} color="#28a745" />}
+
       <FlatList
         data={[]} 
         renderItem={null}
         ListHeaderComponent={
           <>
+            {renderSkillWidget()}
+
             <View style={styles.sectionHeader}>
               <Text style={styles.subtitle}>Tus Rutinas</Text>
-              <TouchableOpacity onPress={handleCreateNew}>
-                <Text style={styles.addText}>+ NUEVA</Text>
+              <TouchableOpacity style={styles.addBtn} onPress={handleCreateNew}>
+                <Ionicons name="add" size={20} color="#fff" />
               </TouchableOpacity>
             </View>
             
-            {templates.map(item => (
-              <View key={item.id}>
-                {renderRoutineItem({ item })}
+            {templates.map(item => renderRoutineItem({ item }))}
+            {templates.length === 0 && !loading && (
+              <View style={styles.emptyState}>
+                <Ionicons name="fitness-outline" size={48} color="#c7c7cc" />
+                <Text style={styles.emptyText}>No tienes rutinas todavía.</Text>
               </View>
-            ))}
-            {templates.length === 0 && <Text key="empty-templates" style={styles.emptyText}>No tienes plantillas.</Text>}
-            <View style={{ height: 100 }} />
+            )}
+            <View style={{ height: 40 }} />
           </>
         }
         showsVerticalScrollIndicator={false}
@@ -126,32 +199,100 @@ export const HomeScreen = ({ navigation }: { navigation: any }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#f5f5f7' },
-  header: { marginTop: 40, marginBottom: 20 },
-  title: { fontSize: 32, fontWeight: '800', color: '#1c1c1e', letterSpacing: -1 },
-  userText: { fontSize: 14, color: '#8e8e93', fontWeight: '600' },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
-  subtitle: { fontSize: 20, fontWeight: '800', color: '#1c1c1e' },
-  addText: { color: '#28a745', fontWeight: 'bold', fontSize: 14 },
-  listContainer: { paddingBottom: 20 },
-  routineCard: { 
-    backgroundColor: '#fff', padding: 16, borderRadius: 16, marginBottom: 12, 
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 2
-  },
-  routineInfo: { flex: 1, paddingVertical: 4 },
-  routineName: { fontSize: 18, fontWeight: '800', color: '#1c1c1e' },
-  routineDate: { fontSize: 11, color: '#8e8e93', marginTop: 2, fontWeight: '600', textTransform: 'uppercase' },
-  cardActions: { flexDirection: 'row', alignItems: 'center' },
-  editIconBtn: { padding: 10, marginRight: 5 },
-  startBtn: { 
-    backgroundColor: '#28a745', 
+  container: { flex: 1, padding: 20, backgroundColor: '#f2f2f7' },
+  header: { 
+    marginTop: 40, 
+    marginBottom: 25, 
     flexDirection: 'row', 
-    alignItems: 'center', 
-    paddingHorizontal: 14, 
-    paddingVertical: 8, 
-    borderRadius: 10,
+    justifyContent: 'space-between', 
+    alignItems: 'center' 
   },
-  startBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 12, marginLeft: 4 },
-  emptyText: { textAlign: 'center', color: '#8e8e93', marginTop: 10, fontSize: 14, fontStyle: 'italic' }
+  welcomeText: { fontSize: 16, color: '#8e8e93', fontWeight: '600' },
+  title: { fontSize: 28, fontWeight: '900', color: '#1c1c1e', letterSpacing: -0.5 },
+  profileIcon: { opacity: 0.8 },
+  
+  // Skill Widget Styles
+  skillWidget: {
+    backgroundColor: '#1c1c1e',
+    borderRadius: 24,
+    padding: 20,
+    marginBottom: 30,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.2,
+    shadowRadius: 15,
+    elevation: 8,
+  },
+  widgetHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  widgetTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  trophyBg: { 
+    backgroundColor: 'rgba(255, 215, 0, 0.15)', 
+    padding: 6, 
+    borderRadius: 8 
+  },
+  widgetTitle: { color: '#fff', fontSize: 16, fontWeight: '800' },
+  countText: { color: '#8e8e93', fontSize: 12, fontWeight: '700' },
+  mainProgressContainer: { marginBottom: 15 },
+  progressTrack: { height: 6, backgroundColor: '#3a3a3c', borderRadius: 3, overflow: 'hidden' },
+  progressFill: { height: '100%', backgroundColor: '#28a745' },
+  
+  nextSkillCard: {
+    backgroundColor: '#2c2c2e',
+    borderRadius: 16,
+    padding: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  nextInfo: { flex: 1 },
+  nextLabel: { color: '#8e8e93', fontSize: 9, fontWeight: '900', letterSpacing: 1 },
+  nextNodeTitle: { color: '#fff', fontSize: 14, fontWeight: '700', marginTop: 2 },
+  reqSummary: { gap: 4, alignItems: 'flex-end' },
+  reqMiniRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  reqMiniText: { color: '#8e8e93', fontSize: 10, fontWeight: '600' },
+  reqMetText: { color: '#28a745' },
+  allDoneText: { color: '#ffd700', textAlign: 'center', fontWeight: 'bold' },
+
+  sectionHeader: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    marginBottom: 20 
+  },
+  subtitle: { fontSize: 22, fontWeight: '900', color: '#1c1c1e' },
+  addBtn: { 
+    backgroundColor: '#1c1c1e', 
+    width: 32, 
+    height: 32, 
+    borderRadius: 16, 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  
+  routineCard: { 
+    backgroundColor: '#fff', 
+    padding: 20, 
+    borderRadius: 20, 
+    marginBottom: 15, 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center',
+    shadowColor: '#000', 
+    shadowOffset: { width: 0, height: 4 }, 
+    shadowOpacity: 0.05, 
+    shadowRadius: 10, 
+    elevation: 3
+  },
+  routineInfo: { flex: 1 },
+  routineName: { fontSize: 18, fontWeight: '800', color: '#1c1c1e', marginBottom: 6 },
+  routineMeta: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  routineDate: { fontSize: 12, color: '#8e8e93', fontWeight: '600' },
+  startIconBtn: { padding: 5 },
+  emptyState: { alignItems: 'center', marginTop: 40, gap: 10 },
+  emptyText: { color: '#c7c7cc', fontSize: 16, fontWeight: '600' }
 });
