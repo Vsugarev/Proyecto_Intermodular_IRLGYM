@@ -156,7 +156,7 @@ export const ProfileScreen = ({ navigation }: any) => {
         <View style={styles.statsCard}>
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{stats?.streakCount ?? 0}</Text>
-            <Text style={styles.statLabel}>Racha Días</Text>
+            <Text style={styles.statLabel}>Racha Semanas</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>

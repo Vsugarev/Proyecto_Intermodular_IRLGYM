@@ -13,9 +13,30 @@ export const SkillService = {
       stats = { userId, level: 1, currentXp: 0, streakCount: 0 };
     }
     
+    // Lógica de racha semanal
+    const now = new Date();
+    const startOfCurrentWeek = this.getStartOfWeek(now);
+    
+    if (stats.lastWorkoutDate) {
+      const lastWorkout = new Date(stats.lastWorkoutDate);
+      const startOfLastWeek = this.getStartOfWeek(lastWorkout);
+      
+      const diffTime = startOfCurrentWeek.getTime() - startOfLastWeek.getTime();
+      const diffWeeks = Math.round(diffTime / (1000 * 60 * 60 * 24 * 7));
+
+      if (diffWeeks === 1) {
+        stats.streakCount += 1;
+      } else if (diffWeeks > 1) {
+        stats.streakCount = 1;
+      }
+      // Si diffWeeks === 0, ya ha entrenado esta semana, mantenemos racha
+    } else {
+      stats.streakCount = 1;
+    }
+
+    stats.lastWorkoutDate = now.toISOString();
     stats.currentXp += xpAmount;
     
-    // Verificamos si hay subida de nivel
     let nextLevelBaseXP = this.getXPForLevel(stats.level + 1);
     while (stats.currentXp >= nextLevelBaseXP) {
       stats.level += 1;
@@ -23,6 +44,15 @@ export const SkillService = {
     }
     
     await UserStatsRepository.save(stats);
+  },
+
+  getStartOfWeek(date: Date): Date {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    const start = new Date(d.setDate(diff));
+    start.setHours(0, 0, 0, 0);
+    return start;
   },
 
   // Calculamos el progreso porcentual para el siguiente nivel
