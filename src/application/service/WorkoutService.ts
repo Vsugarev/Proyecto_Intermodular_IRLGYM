@@ -120,5 +120,44 @@ export const WorkoutService = {
     }
     
     return newWorkout;
+  },
+
+  async createRewardWorkout(userId: string, routineName: string): Promise<void> {
+    const workouts = await this.getWorkoutsByUser(userId);
+    const exists = workouts.some((w: Workout) => w.name === routineName && w.isLocked);
+    if (exists) return;
+
+    const newWorkout: Workout = {
+      id: `reward_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+      userId,
+      name: routineName,
+      date: new Date().toISOString(),
+      status: 'completed',
+      isTemplate: true,
+      isLocked: true
+    };
+
+    await WorkoutRepository.save(newWorkout);
+
+    // Definición de ejercicios para rutinas de recompensa (FP nivel)
+    let exerciseIds: string[] = [];
+    if (routineName.includes('Fundamentos')) exerciseIds = ['ex_1', 'ex_2', 'ex_3']; // Press, Sentadilla, Peso Muerto
+    else if (routineName.includes('Powerlifting')) exerciseIds = ['ex_1', 'ex_2', 'ex_3', 'ex_5']; 
+    else if (routineName.includes('Calistenia')) exerciseIds = ['ex_4', 'ex_5', 'ex_26'];
+    else if (routineName.includes('Hipertrofia')) exerciseIds = ['ex_10', 'ex_11', 'ex_12', 'ex_22'];
+    else if (routineName.includes('ATLETA')) exerciseIds = ['ex_1', 'ex_2', 'ex_3', 'ex_4', 'ex_5', 'ex_8'];
+
+    for (const exId of exerciseIds) {
+      await LogRepository.save({
+        id: `log_rw_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+        workoutId: newWorkout.id,
+        exerciseId: exId,
+        series: [
+          { kg: 0, reps: 0, type: 'R' },
+          { kg: 0, reps: 0, type: 'R' },
+          { kg: 0, reps: 0, type: 'R' }
+        ]
+      });
+    }
   }
 };

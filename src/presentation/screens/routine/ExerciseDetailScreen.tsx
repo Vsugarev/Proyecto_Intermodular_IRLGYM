@@ -25,29 +25,42 @@ export const ExerciseDetailScreen = ({ route, navigation }: { route: any, naviga
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (exercise?.isCustom) {
-      navigation.setOptions({
-        headerRight: () => (
-          <View style={{ flexDirection: 'row', marginRight: 10 }}>
-            <TouchableOpacity onPress={() => navigation.navigate('ExerciseCreate', { exerciseId: exercise.id })} style={{ padding: 8 }}>
-              <Ionicons name="create-outline" size={24} color={Theme.colors.success} />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={handleDelete} style={{ padding: 8 }}>
-              <Ionicons name="trash-outline" size={24} color={Theme.colors.danger} />
-            </TouchableOpacity>
-          </View>
-        )
-      });
-    } else {
-      navigation.setOptions({ headerRight: () => null });
-    }
-  }, [exercise]);
+    navigation.setOptions({
+      headerRight: () => (
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 10 }}>
+          <TouchableOpacity onPress={handleToggleFavorite} style={{ padding: 8 }}>
+            <Ionicons 
+              name={exercise?.isFavorite ? "star" : "star-outline"} 
+              size={24} 
+              color={Theme.colors.accent} 
+            />
+          </TouchableOpacity>
+          {exercise?.isCustom && (
+            <>
+              <TouchableOpacity onPress={() => navigation.navigate('ExerciseCreate', { exerciseId: exercise.id })} style={{ padding: 8 }}>
+                <Ionicons name="create-outline" size={24} color={Theme.colors.success} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleDelete} style={{ padding: 8 }}>
+                <Ionicons name="trash-outline" size={24} color={Theme.colors.danger} />
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+      )
+    });
+  }, [navigation, exercise]);
 
   useFocusEffect(
     React.useCallback(() => {
       loadData();
     }, [exerciseId])
   );
+
+  const handleToggleFavorite = async () => {
+    if (!exercise) return;
+    await ExerciseService.toggleFavorite(exercise.id, exercise.isFavorite);
+    loadData();
+  };
 
   const handleDelete = () => {
     Alert.alert(

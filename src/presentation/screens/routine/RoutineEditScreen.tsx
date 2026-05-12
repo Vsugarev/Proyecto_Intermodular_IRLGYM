@@ -39,7 +39,7 @@ export const RoutineEditScreen = ({ route, navigation }: { route: any, navigatio
         } as ExerciseWithLog;
       }));
       setExercises(logsWithDetails);
-      const structure = logsWithDetails.map(ex => `${ex.exerciseId}:${ex.series.length}`).join('|');
+      const structure = logsWithDetails.map((ex: any) => `${ex.exerciseId}:${ex.series.length}`).join('|');
       setOriginalStructure(structure);
     } catch (e) {
       console.error(e);
@@ -88,7 +88,7 @@ export const RoutineEditScreen = ({ route, navigation }: { route: any, navigatio
 
   const handleUpdate = async () => {
     if (saving) return;
-    const currentStructure = exercises.map(ex => `${ex.exerciseId}:${ex.series.length}`).join('|');
+    const currentStructure = exercises.map((ex: any) => `${ex.exerciseId}:${ex.series.length}`).join('|');
     const hasStructureChanged = currentStructure !== originalStructure;
 
     if (routine?.status === 'in_progress' && routine?.parentId && hasStructureChanged) {
@@ -170,7 +170,7 @@ export const RoutineEditScreen = ({ route, navigation }: { route: any, navigatio
   };
 
   const renderSetRow = (set: Set, index: number, logId: string) => {
-    const log = exercises.find(ex => ex.id === logId);
+    const log = exercises.find((ex: any) => ex.id === logId);
     const prevSet = log?.previousSeries && log.previousSeries[index];
 
     return (

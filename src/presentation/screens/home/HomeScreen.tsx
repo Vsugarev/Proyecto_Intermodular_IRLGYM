@@ -151,18 +151,24 @@ export const HomeScreen = ({ navigation }: { navigation: any }) => {
       </View>
       
       <View style={styles.cardActionRow}>
-        <TouchableOpacity 
-           style={styles.editBtn} 
-           onPress={() => navigation.navigate('EditRoutine', { routine: item })}
-        >
-          <Ionicons name="settings-outline" size={20} color={Theme.colors.textSecondary} />
-        </TouchableOpacity>
+        {!item.isLocked && (
+          <TouchableOpacity 
+             style={styles.editBtn} 
+             onPress={() => navigation.navigate('EditRoutine', { routine: item })}
+          >
+            <Ionicons name="settings-outline" size={20} color={Theme.colors.textSecondary} />
+          </TouchableOpacity>
+        )}
         <View style={styles.playBtn}>
           <Ionicons name="play" size={20} color={Theme.colors.text} />
         </View>
       </View>
     </TouchableOpacity>
   );
+
+  const [showRewards, setShowRewards] = useState(false);
+  const rewardRoutines = templates.filter((w: any) => w.isLocked);
+  const userTemplates = templates.filter((w: any) => !w.isLocked);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -186,6 +192,28 @@ export const HomeScreen = ({ navigation }: { navigation: any }) => {
             <>
               {renderSkillWidget()}
 
+              {rewardRoutines.length > 0 && (
+                <View style={styles.rewardSection}>
+                  <TouchableOpacity 
+                    style={styles.rewardAccordionHeader} 
+                    onPress={() => setShowRewards(!showRewards)}
+                    activeOpacity={0.8}
+                  >
+                    <View style={styles.rewardTitleRow}>
+                      <Ionicons name="ribbon" size={20} color={Theme.colors.accent} />
+                      <Text style={styles.rewardSectionTitle}>Rutinas de Maestría ({rewardRoutines.length})</Text>
+                    </View>
+                    <Ionicons name={showRewards ? "chevron-up" : "chevron-down"} size={20} color={Theme.colors.textSecondary} />
+                  </TouchableOpacity>
+                  
+                  {showRewards && (
+                    <View style={styles.rewardList}>
+                      {rewardRoutines.map(item => renderRoutineItem({ item }))}
+                    </View>
+                  )}
+                </View>
+              )}
+
               <View style={styles.sectionHeader}>
                 <Text style={styles.subtitle}>Tus Rutinas</Text>
                 <TouchableOpacity style={styles.addBtn} onPress={handleCreateNew}>
@@ -193,8 +221,8 @@ export const HomeScreen = ({ navigation }: { navigation: any }) => {
                 </TouchableOpacity>
               </View>
               
-              {templates.map(item => renderRoutineItem({ item }))}
-              {templates.length === 0 && !loading && (
+              {userTemplates.map(item => renderRoutineItem({ item }))}
+              {userTemplates.length === 0 && !loading && (
                 <View style={styles.emptyState}>
                   <Ionicons name="skull-outline" size={60} color={Theme.colors.cardLight} />
                   <Text style={styles.emptyText}>Sin rutinas. Empieza tu leyenda.</Text>
@@ -275,6 +303,21 @@ const styles = StyleSheet.create({
   reqMiniText: { ...Theme.typography.caption, fontSize: 10, fontWeight: '600' },
   reqMetText: { color: Theme.colors.success },
   allDoneText: { color: Theme.colors.accent, textAlign: 'center', fontWeight: 'bold', fontSize: 14 },
+
+  rewardSection: { marginBottom: Theme.spacing.xl },
+  rewardAccordionHeader: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    padding: 12, 
+    backgroundColor: Theme.colors.card, 
+    borderRadius: Theme.roundness.md,
+    borderWidth: 1,
+    borderColor: Theme.colors.accent + '33'
+  },
+  rewardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  rewardSectionTitle: { ...Theme.typography.h3, fontSize: 14, color: Theme.colors.accent },
+  rewardList: { marginTop: 10, paddingLeft: 10, borderLeftWidth: 2, borderLeftColor: Theme.colors.accent + '22' },
 
   sectionHeader: { 
     flexDirection: 'row', 

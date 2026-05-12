@@ -135,7 +135,7 @@ export const SkillService = {
     const userProgress = await ProgressRepository.findAllByUserId(userId);
 
     const tree = await Promise.all(allNodes.map(async (node) => {
-      const progress = userProgress.find(p => p.nodeId === node.id);
+      const progress = userProgress.find((p: any) => p.nodeId === node.id);
       let status: 'locked' | 'available' | 'completed' | 'requirements_pending' = 'locked';
       
       if (progress && progress.status === 'completed') {
@@ -143,7 +143,7 @@ export const SkillService = {
       } else {
         const isFirstNode = !node.prevNodeId;
         const prevNodeCompleted = node.prevNodeId ? 
-          userProgress.find(p => p.nodeId === node.prevNodeId)?.status === 'completed' : false;
+          userProgress.find((p: any) => p.nodeId === node.prevNodeId)?.status === 'completed' : false;
 
         const { ok: meetsRequirements, details } = await this.validateRequirements(userId, node.requirementsJson || '');
         if (isFirstNode || prevNodeCompleted) status = meetsRequirements ? 'available' : 'requirements_pending';
@@ -166,7 +166,7 @@ export const SkillService = {
 
   async unlockSkill(userId: string, skillId: string): Promise<{ effect: string } | void> {
     const userProgress = await ProgressRepository.findAllByUserId(userId);
-    const existingProgress = userProgress.find(p => p.nodeId === skillId);
+    const existingProgress = userProgress.find((p: any) => p.nodeId === skillId);
     if (existingProgress && existingProgress.status === 'completed') return;
 
     const node = await SkillRepository.findById(skillId);
@@ -177,6 +177,12 @@ export const SkillService = {
 
     await ProgressRepository.save({ userId, nodeId: skillId, status: 'completed', currentProgress: 100 });
     if (node.xpReward) await this.addExperience(userId, node.xpReward);
+
+    const rewardName = this.getRewardDetail(skillId);
+    if (rewardName && rewardName.startsWith('Rutina: ')) {
+      const { WorkoutService } = require('./WorkoutService');
+      await WorkoutService.createRewardWorkout(userId, rewardName);
+    }
 
     let effectMessage = 'Has ganado experiencia y mejorado tus habilidades.';
     return { effect: effectMessage };

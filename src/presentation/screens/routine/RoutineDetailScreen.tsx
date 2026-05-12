@@ -35,14 +35,14 @@ export const RoutineDetailScreen = ({ route, navigation }: any) => {
 
   React.useLayoutEffect(() => {
     navigation.setOptions({
-      headerRight: () => (
+      headerRight: () => (!routine?.isLocked ? (
         <TouchableOpacity 
           onPress={() => navigation.navigate('EditRoutine', { routine: routine })}
           style={{ marginRight: 15 }}
         >
           <Text style={{ color: Theme.colors.success, fontWeight: 'bold', fontSize: 16 }}>Editar</Text>
         </TouchableOpacity>
-      ),
+      ) : null),
     });
   }, [navigation, routine]);
 

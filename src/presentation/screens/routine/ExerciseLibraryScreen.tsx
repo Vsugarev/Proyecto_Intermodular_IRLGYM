@@ -40,6 +40,11 @@ export const ExerciseLibraryScreen = ({ route, navigation }: any) => {
     setLoading(false);
   };
 
+  const handleToggleFavorite = async (exercise: any) => {
+    await ExerciseService.toggleFavorite(exercise.id, exercise.isFavorite);
+    loadExercises();
+  };
+
   const handleSelect = (item: any) => {
     if (isSelecting && onSelect) {
       onSelect(item); 
@@ -62,6 +67,13 @@ export const ExerciseLibraryScreen = ({ route, navigation }: any) => {
         <View style={styles.info}>
           <Text style={styles.name}>{item.name}</Text>
           <View style={styles.badgeRow}>
+            <TouchableOpacity onPress={() => handleToggleFavorite(item)}>
+              <Ionicons 
+                name={item.isFavorite ? "star" : "star-outline"} 
+                size={14} 
+                color={item.isFavorite ? Theme.colors.accent : Theme.colors.textSecondary} 
+              />
+            </TouchableOpacity>
             <View style={styles.badge}>
               <Text style={styles.badgeText}>{item.category}</Text>
             </View>
