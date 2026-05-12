@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   StyleSheet, Text, TextInput, ActivityIndicator, 
-  Alert, ScrollView, TouchableOpacity, View, SafeAreaView
+  Alert, ScrollView, TouchableOpacity, View, SafeAreaView, Platform, StatusBar 
 } from 'react-native';
 import { AuthService } from '../../../application/service/AuthService';
 import { Theme } from '../../styles/theme';
@@ -141,7 +141,11 @@ export const AuthScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Theme.colors.background },
+  container: { 
+    flex: 1, 
+    backgroundColor: Theme.colors.background,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0
+  },
   scrollContent: { flexGrow: 1, padding: Theme.spacing.lg, justifyContent: 'center' },
   header: { alignItems: 'center', marginBottom: 40 },
   logoCircle: { 

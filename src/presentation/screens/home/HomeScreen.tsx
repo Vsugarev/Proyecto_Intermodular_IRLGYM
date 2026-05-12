@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, FlatList, ActivityIndicator, Animated, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, FlatList, ActivityIndicator, Animated, SafeAreaView, Platform, StatusBar } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { WorkoutService } from '../../../application/service/WorkoutService';
@@ -214,10 +214,14 @@ export const HomeScreen = ({ navigation }: { navigation: any }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Theme.colors.background },
+  container: { 
+    flex: 1, 
+    backgroundColor: Theme.colors.background,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 
+  },
   content: { flex: 1, paddingHorizontal: Theme.spacing.md },
   header: { 
-    marginTop: Theme.spacing.lg, 
+    marginTop: Theme.spacing.sm, 
     marginBottom: Theme.spacing.xl, 
     flexDirection: 'row', 
     justifyContent: 'space-between', 

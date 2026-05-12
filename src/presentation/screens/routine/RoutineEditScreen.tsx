@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, FlatList, KeyboardAvoidingView, Platform, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, FlatList, KeyboardAvoidingView, Platform, SafeAreaView, StatusBar } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { WorkoutService } from '../../../application/service/WorkoutService';
 import { LogService } from '../../../application/service/LogService';
@@ -313,7 +313,11 @@ export const RoutineEditScreen = ({ route, navigation }: { route: any, navigatio
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Theme.colors.background },
+  container: { 
+    flex: 1, 
+    backgroundColor: Theme.colors.background,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0
+  },
   listContent: { padding: Theme.spacing.md },
   header: { marginBottom: Theme.spacing.lg, marginTop: Theme.spacing.md },
   routineNameInput: { ...Theme.typography.h1, fontSize: 26, padding: 0 },

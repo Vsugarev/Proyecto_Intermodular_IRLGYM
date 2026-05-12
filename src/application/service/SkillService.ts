@@ -20,15 +20,11 @@ export const SkillService = {
     if (stats.lastWorkoutDate) {
       const lastWorkout = new Date(stats.lastWorkoutDate);
       const startOfLastWeek = this.getStartOfWeek(lastWorkout);
-      
       const diffTime = startOfCurrentWeek.getTime() - startOfLastWeek.getTime();
       const diffWeeks = Math.round(diffTime / (1000 * 60 * 60 * 24 * 7));
 
-      if (diffWeeks === 1) {
-        stats.streakCount += 1;
-      } else if (diffWeeks > 1) {
-        stats.streakCount = 1;
-      }
+      if (diffWeeks === 1) stats.streakCount += 1;
+      else if (diffWeeks > 1) stats.streakCount = 1;
     } else {
       stats.streakCount = 1;
     }
@@ -59,15 +55,12 @@ export const SkillService = {
     const nextLevelBaseXP = this.getXPForLevel(level + 1);
     const xpInCurrentLevel = xp - currentLevelBaseXP;
     const xpRequiredForNext = nextLevelBaseXP - currentLevelBaseXP;
-    
     return Math.min(Math.max(xpInCurrentLevel / xpRequiredForNext, 0), 1);
   },
 
   getXPForLevel(level: number): number {
     let total = 0;
-    for (let i = 1; i < level; i++) {
-      total += i * 100;
-    }
+    for (let i = 1; i < level; i++) total += i * 100;
     return total;
   },
 
@@ -79,13 +72,8 @@ export const SkillService = {
       const statsData = await UserStatsRepository.findByUserId(userId);
       const stats = statsData || { level: 1, streakCount: 0 };
 
-      if (req.level) {
-        details.push({ label: 'Nivel', current: stats.level, required: req.level, met: stats.level >= req.level, unit: '' });
-      }
-
-      if (req.streak) {
-        details.push({ label: 'Racha', current: stats.streakCount, required: req.streak, met: stats.streakCount >= req.streak, unit: 'sem' });
-      }
+      if (req.level) details.push({ label: 'Nivel', current: stats.level, required: req.level, met: stats.level >= req.level, unit: '' });
+      if (req.streak) details.push({ label: 'Racha', current: stats.streakCount, required: req.streak, met: stats.streakCount >= req.streak, unit: 'sem' });
 
       const allUserWorkouts = await WorkoutRepository.findAllByUserId(userId);
       const userWorkoutIds = new Set(allUserWorkouts.map((w: Workout) => w.id));
@@ -99,14 +87,7 @@ export const SkillService = {
             const matchesName = w.name.includes(wReq.name.replace('Rutina: ', ''));
             return isCompleted && (matchesTemplate || matchesName);
           }).length;
-
-          details.push({ 
-            label: `${wReq.name.split(':')[1] || wReq.name}`, 
-            current: completedCount, 
-            required: wReq.count, 
-            met: completedCount >= wReq.count,
-            unit: 'x'
-          });
+          details.push({ label: `${wReq.name.split(':')[1] || wReq.name}`, current: completedCount, required: wReq.count, met: completedCount >= wReq.count, unit: 'x' });
         }
       }
 
@@ -116,45 +97,24 @@ export const SkillService = {
           const logs = await LogRepository.findByExerciseId(exReq.id);
           const userLogs = logs.filter((l: any) => userWorkoutIds.has(l.workoutId));
           const totalSeries = userLogs.reduce((acc: number, l: any) => acc + (l.series?.length || 0), 0);
-          details.push({ 
-            label: `Sets: ${exercise?.name || 'Ej'}`, 
-            current: totalSeries, 
-            required: exReq.sets, 
-            met: totalSeries >= exReq.sets,
-            unit: 'ser'
-          });
+          details.push({ label: `Sets: ${exercise?.name || 'Ej'}`, current: totalSeries, required: exReq.sets, met: totalSeries >= exReq.sets, unit: 'ser' });
         }
       }
 
-      // NUEVO: Requisito de Peso Máximo
       if (req.weights && Array.isArray(req.weights)) {
         for (const wReq of req.weights) {
           const exercise = await ExerciseRepository.findById(wReq.id);
           const logs = await LogRepository.findByExerciseId(wReq.id);
           const userLogs = logs.filter((l: any) => userWorkoutIds.has(l.workoutId));
-          
           let maxWeight = 0;
-          userLogs.forEach((l: any) => {
-            l.series.forEach((s: any) => {
-              if (s.kg > maxWeight) maxWeight = s.kg;
-            });
-          });
-
-          details.push({ 
-            label: `Peso: ${exercise?.name || 'Ej'}`, 
-            current: maxWeight, 
-            required: wReq.kg, 
-            met: maxWeight >= wReq.kg,
-            unit: 'kg'
-          });
+          userLogs.forEach((l: any) => l.series.forEach((s: any) => { if (s.kg > maxWeight) maxWeight = s.kg; }));
+          details.push({ label: `Peso: ${exercise?.name || 'Ej'}`, current: maxWeight, required: wReq.kg, met: maxWeight >= wReq.kg, unit: 'kg' });
         }
       }
 
       const ok = details.every(d => d.met);
       return { ok, details };
-    } catch (e) {
-      return { ok: false, details: [] };
-    }
+    } catch (e) { return { ok: false, details: [] }; }
   },
 
   getRewardDetail(skillId: string): string | null {
@@ -171,7 +131,6 @@ export const SkillService = {
 
   async getSkillTree(userId: string) {
     await this.seedSkillsIfEmpty();
-
     const allNodes = await SkillRepository.findAll();
     const userProgress = await ProgressRepository.findAllByUserId(userId);
 
@@ -187,21 +146,13 @@ export const SkillService = {
           userProgress.find(p => p.nodeId === node.prevNodeId)?.status === 'completed' : false;
 
         const { ok: meetsRequirements, details } = await this.validateRequirements(userId, node.requirementsJson || '');
-
-        if (isFirstNode || prevNodeCompleted) {
-          status = meetsRequirements ? 'available' : 'requirements_pending';
-        } else {
-          status = 'locked';
-        }
-        
+        if (isFirstNode || prevNodeCompleted) status = meetsRequirements ? 'available' : 'requirements_pending';
+        else status = 'locked';
         (node as any).requirementDetails = details;
       }
-      
       (node as any).rewardDetail = this.getRewardDetail(node.id);
-
       return { ...node, status };
     }));
-
     return tree;
   },
 
@@ -209,16 +160,8 @@ export const SkillService = {
     const tree = await this.getSkillTree(userId);
     const completedCount = tree.filter(n => n.status === 'completed').length;
     const totalCount = tree.length;
-    
-    // Buscar el siguiente nodo disponible o pendiente más cercano
     const nextNode = tree.find(n => n.status === 'available' || n.status === 'requirements_pending');
-    
-    return {
-      completedCount,
-      totalCount,
-      nextNode,
-      overallProgress: totalCount > 0 ? completedCount / totalCount : 0
-    };
+    return { completedCount, totalCount, nextNode, overallProgress: totalCount > 0 ? completedCount / totalCount : 0 };
   },
 
   async unlockSkill(userId: string, skillId: string): Promise<{ effect: string } | void> {
@@ -232,30 +175,25 @@ export const SkillService = {
     const { ok: canUnlock } = await this.validateRequirements(userId, node.requirementsJson || '');
     if (!canUnlock) throw new Error("No cumples los requisitos");
 
-    await ProgressRepository.save({
-      userId,
-      nodeId: skillId,
-      status: 'completed',
-      currentProgress: 100
-    });
-
+    await ProgressRepository.save({ userId, nodeId: skillId, status: 'completed', currentProgress: 100 });
     if (node.xpReward) await this.addExperience(userId, node.xpReward);
 
     let effectMessage = 'Has ganado experiencia y mejorado tus habilidades.';
-    // ... (Lógica de desbloqueo de rutinas mantenida igual)
     return { effect: effectMessage };
   },
 
   async seedSkillsIfEmpty() {
     const initialSkills: SkillNode[] = [
+      // RAMA FUERZA (BASE) - Limpia de nutrición
       { id: 'sk_1', title: 'Fundamentos de Fuerza', branch: 'base', requirementsJson: '{"level": 1}', prevNodeId: null, xpReward: 50 },
       { id: 'sk_2', title: 'Técnica de Sentadilla', branch: 'base', requirementsJson: '{"level": 2, "exercises": [{"id": "ex_2", "sets": 3}]}', prevNodeId: 'sk_1', xpReward: 100 },
       { id: 'sk_3', title: 'Powerlifting Base', branch: 'base', requirementsJson: '{"level": 5, "workouts": [{"name": "Rutina: Fundamentos", "count": 2}]}', prevNodeId: 'sk_2', xpReward: 200 },
-      // Nivel Maestro pide PESO máximo
       { id: 'sk_11', title: 'Maestro del Press', branch: 'base', requirementsJson: '{"level": 8, "weights": [{"id": "ex_1", "kg": 60}]}', prevNodeId: 'sk_3', xpReward: 250 },
       { id: 'sk_12', title: 'Rey del Peso Muerto', branch: 'base', requirementsJson: '{"level": 10, "weights": [{"id": "ex_3", "kg": 100}]}', prevNodeId: 'sk_11', xpReward: 300 },
       { id: 'sk_15', title: 'Guerrero de Hierro', branch: 'base', requirementsJson: '{"level": 15, "weights": [{"id": "ex_2", "kg": 120}]}', prevNodeId: 'sk_12', xpReward: 500 },
+      { id: 'sk_20', title: 'Mentalidad de Acero', branch: 'base', requirementsJson: '{"level": 25, "streak": 12}', prevNodeId: 'sk_15', xpReward: 2000 },
       
+      // RAMA CALISTENIA
       { id: 'sk_4', title: 'Calistenia Inicial', branch: 'calisthenics', requirementsJson: '{"level": 1}', prevNodeId: null, xpReward: 50 },
       { id: 'sk_5', title: 'Dominio de Pull-up', branch: 'calisthenics', requirementsJson: '{"level": 3, "exercises": [{"id": "ex_5", "sets": 5}]}', prevNodeId: 'sk_4', xpReward: 100 },
       { id: 'sk_6', title: 'Fondos Explosivos', branch: 'calisthenics', requirementsJson: '{"level": 5, "exercises": [{"id": "ex_26", "sets": 6}]}', prevNodeId: 'sk_5', xpReward: 150 },
@@ -263,20 +201,17 @@ export const SkillService = {
       { id: 'sk_8', title: 'Maestría del Muscle-up', branch: 'calisthenics', requirementsJson: '{"level": 12, "exercises": [{"id": "ex_31", "sets": 1}]}', prevNodeId: 'sk_7', xpReward: 400 },
       { id: 'sk_16', title: 'Atleta Completo', branch: 'calisthenics', requirementsJson: '{"level": 20, "streak": 8}', prevNodeId: 'sk_8', xpReward: 1000 },
       
+      // RAMA HIPERTROFIA
       { id: 'sk_9', title: 'Hipertrofia: Torso', branch: 'hypertrophy', requirementsJson: '{"level": 4}', prevNodeId: null, xpReward: 150 },
       { id: 'sk_10', title: 'Hipertrofia: Pierna', branch: 'hypertrophy', requirementsJson: '{"level": 4}', prevNodeId: null, xpReward: 150 },
       { id: 'sk_13', title: 'Conexión Mente-Músculo', branch: 'hypertrophy', requirementsJson: '{"level": 7, "exercises": [{"id": "ex_22", "sets": 8}, {"id": "ex_24", "sets": 8}]}', prevNodeId: 'sk_9', xpReward: 200 },
       { id: 'sk_14', title: 'Definición Muscular', branch: 'hypertrophy', requirementsJson: '{"level": 10, "streak": 2}', prevNodeId: 'sk_13', xpReward: 300 },
-      
-      { id: 'sk_21', title: 'Nutrición Básica', branch: 'base', requirementsJson: '{"level": 3}', prevNodeId: 'sk_1', xpReward: 50 },
-      { id: 'sk_17', title: 'Superávit Calórico', branch: 'base', requirementsJson: '{"level": 5, "streak": 1}', prevNodeId: 'sk_21', xpReward: 100 },
-      { id: 'sk_18', title: 'Déficit Calórico', branch: 'base', requirementsJson: '{"level": 5, "streak": 1}', prevNodeId: 'sk_21', xpReward: 100 },
-      { id: 'sk_19', title: 'Suplementación Básica', branch: 'base', requirementsJson: '{"level": 10, "workouts": [{"name": "Rutina: Fundamentos", "count": 10}]}', prevNodeId: 'sk_17', xpReward: 200 },
-      { id: 'sk_20', title: 'Mentalidad de Acero', branch: 'base', requirementsJson: '{"level": 25, "streak": 12}', prevNodeId: 'sk_15', xpReward: 2000 },
     ];
 
     const existing = await SkillRepository.findAll();
-    if (existing.length < initialSkills.length) {
+    // Limpiamos y re-insertamos si hay cambios estructurales (como quitar nutrición)
+    if (existing.length !== initialSkills.length) {
+      await SkillRepository.deleteAll();
       await SkillRepository.saveAll(initialSkills);
     }
   }

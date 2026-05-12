@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Image, Alert, ActivityIndicator, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Image, Alert, ActivityIndicator, SafeAreaView, Platform, StatusBar } from 'react-native';
 import { UserStatsRepository, UserProfileRepository, WorkoutRepository } from '../../../data/repositories/index';
 import { AuthService } from '../../../application/service/AuthService';
 import { UserStats, UserProfile } from '../../../domain/entities/User';
@@ -227,7 +227,11 @@ export const ProfileScreen = ({ navigation }: any) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Theme.colors.background },
+  container: { 
+    flex: 1, 
+    backgroundColor: Theme.colors.background,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0
+  },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Theme.colors.background },
   scrollContent: { padding: Theme.spacing.md },
   header: { 
