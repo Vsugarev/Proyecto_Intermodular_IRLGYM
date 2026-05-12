@@ -10,6 +10,7 @@ export interface IProgressRepository {
 
   // DELETE
   delete(userId: string, nodeId: string): Promise<void>;
+  deleteByUserId(userId: string): Promise<void>;
   // Resetea todo el árbol de habilidades para un usuario (Re-especialización)
   resetAll(userId: string): Promise<void>;
 }

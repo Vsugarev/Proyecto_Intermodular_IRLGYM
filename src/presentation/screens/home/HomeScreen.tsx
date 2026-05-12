@@ -167,6 +167,7 @@ export const HomeScreen = ({ navigation }: { navigation: any }) => {
   );
 
   const [showRewards, setShowRewards] = useState(false);
+  const [isRewardsHidden, setIsRewardsHidden] = useState(false);
   const rewardRoutines = templates.filter((w: any) => w.isLocked);
   const userTemplates = templates.filter((w: any) => !w.isLocked);
 
@@ -192,26 +193,41 @@ export const HomeScreen = ({ navigation }: { navigation: any }) => {
             <>
               {renderSkillWidget()}
 
-              {rewardRoutines.length > 0 && (
+              {rewardRoutines.length > 0 && !isRewardsHidden && (
                 <View style={styles.rewardSection}>
-                  <TouchableOpacity 
-                    style={styles.rewardAccordionHeader} 
-                    onPress={() => setShowRewards(!showRewards)}
-                    activeOpacity={0.8}
-                  >
-                    <View style={styles.rewardTitleRow}>
+                  <View style={styles.rewardAccordionHeader}>
+                    <TouchableOpacity 
+                      style={styles.rewardTitleRow} 
+                      onPress={() => setShowRewards(!showRewards)}
+                      activeOpacity={0.8}
+                    >
                       <Ionicons name="ribbon" size={20} color={Theme.colors.accent} />
                       <Text style={styles.rewardSectionTitle}>Rutinas de Maestría ({rewardRoutines.length})</Text>
-                    </View>
-                    <Ionicons name={showRewards ? "chevron-up" : "chevron-down"} size={20} color={Theme.colors.textSecondary} />
-                  </TouchableOpacity>
+                      <Ionicons name={showRewards ? "chevron-up" : "chevron-down"} size={16} color={Theme.colors.textSecondary} />
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity onPress={() => setIsRewardsHidden(true)}>
+                      <Ionicons name="eye-off-outline" size={18} color={Theme.colors.textSecondary} />
+                    </TouchableOpacity>
+                  </View>
                   
                   {showRewards && (
                     <View style={styles.rewardList}>
-                      {rewardRoutines.map(item => renderRoutineItem({ item }))}
+                      {rewardRoutines.map((item: any) => renderRoutineItem({ item }))}
                     </View>
                   )}
                 </View>
+              )}
+
+              {isRewardsHidden && rewardRoutines.length > 0 && (
+                <TouchableOpacity 
+                  style={{ alignSelf: 'center', marginBottom: 20 }} 
+                  onPress={() => setIsRewardsHidden(false)}
+                >
+                  <Text style={{ color: Theme.colors.textSecondary, fontSize: 10, textDecorationLine: 'underline' }}>
+                    Mostrar Rutinas de Maestría
+                  </Text>
+                </TouchableOpacity>
               )}
 
               <View style={styles.sectionHeader}>
@@ -315,7 +331,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Theme.colors.accent + '33'
   },
-  rewardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  rewardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
   rewardSectionTitle: { ...Theme.typography.h3, fontSize: 14, color: Theme.colors.accent },
   rewardList: { marginTop: 10, paddingLeft: 10, borderLeftWidth: 2, borderLeftColor: Theme.colors.accent + '22' },
 

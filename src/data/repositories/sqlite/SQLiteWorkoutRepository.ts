@@ -44,6 +44,11 @@ export class SQLiteWorkoutRepository implements IWorkoutRepository {
     const db = await SQLiteClient.getInstance();
     await db.runAsync('DELETE FROM workouts WHERE id = ?', [id]);
   }
+
+  async deleteByUserId(userId: string): Promise<void> {
+    const db = await SQLiteClient.getInstance();
+    await db.runAsync('DELETE FROM workouts WHERE userId = ?', [userId]);
+  }
 async markAsSynced(id: string): Promise<void> {
   const db = await SQLiteClient.getInstance();
   try {

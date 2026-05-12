@@ -1,5 +1,5 @@
 import { db } from '../../../infrastructure/config/firebase';
-import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, where, getDocs, writeBatch } from 'firebase/firestore';
 import { Workout } from '../../../domain/entities/Workout';
 import { IWorkoutRepository } from '../../../domain/repositoriesInterface/IWorkoutRepository';
 
@@ -37,5 +37,13 @@ export class FirebaseWorkoutRepository implements IWorkoutRepository {
 
   async delete(id: string): Promise<void> {
     await deleteDoc(doc(db, this.colName, id));
+  }
+
+  async deleteByUserId(userId: string): Promise<void> {
+    const q = query(collection(db, this.colName), where('userId', '==', userId));
+    const snap = await getDocs(q);
+    const batch = writeBatch(db);
+    snap.docs.forEach(d => batch.delete(d.ref));
+    await batch.commit();
   }
 }

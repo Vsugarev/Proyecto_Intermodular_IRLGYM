@@ -15,4 +15,5 @@ export interface IWorkoutRepository {
   
   // DELETE
   delete(id: string): Promise<void>;
+  deleteByUserId(userId: string): Promise<void>;
 }

@@ -21,6 +21,42 @@ export const ProfileScreen = ({ navigation }: any) => {
   const [weight, setWeight] = useState('');
   const [units, setUnits] = useState<'kg' | 'lb'>('kg');
 
+  const handleLogout = async () => {
+    Alert.alert("Cerrar Sesión", "¿Quieres salir de tu cuenta?", [
+      { text: "Cancelar", style: "cancel" },
+      { text: "Salir", style: "destructive", onPress: async () => await AuthService.logout() }
+    ]);
+  };
+
+  const handleDeleteAccount = async () => {
+    Alert.alert(
+      "ELIMINAR CUENTA", 
+      "Esta acción es irreversible y borrará TODO tu progreso local y en la nube. ¿Estás seguro?", 
+      [
+        { text: "Cancelar", style: "cancel" },
+        { 
+          text: "ELIMINAR TODO", 
+          style: "destructive", 
+          onPress: async () => {
+            try {
+              await AuthService.deleteAccount();
+              // Si tiene éxito, AppNavigator detectará el cambio de auth y sacará al usuario
+            } catch (e: any) {
+              if (e.message.includes("RECIENTEMENTE")) {
+                Alert.alert("Seguridad de Firebase", e.message, [
+                  { text: "Entendido", style: "cancel" },
+                  { text: "Cerrar Sesión", onPress: () => AuthService.logout() }
+                ]);
+              } else {
+                Alert.alert("Error", e.message);
+              }
+            }
+          } 
+        }
+      ]
+    );
+  };
+
   const fetchData = async () => {
     if (auth.currentUser) {
       const uid = auth.currentUser.uid;
@@ -216,9 +252,17 @@ export const ProfileScreen = ({ navigation }: any) => {
         )}
 
         <View style={styles.footer}>
-          <TouchableOpacity style={styles.logoutBtn} onPress={() => AuthService.logout()}>
-            <Ionicons name="log-out" size={20} color={Theme.colors.danger} />
+          <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+            <Ionicons name="log-out-outline" size={20} color={Theme.colors.danger} />
             <Text style={styles.logoutText}>Cerrar Sesión</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.logoutBtn, { marginTop: 10, borderColor: 'rgba(255,59,48,0.2)' }]} 
+            onPress={handleDeleteAccount}
+          >
+            <Ionicons name="trash-outline" size={20} color={Theme.colors.danger} />
+            <Text style={styles.logoutText}>Eliminar Cuenta</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

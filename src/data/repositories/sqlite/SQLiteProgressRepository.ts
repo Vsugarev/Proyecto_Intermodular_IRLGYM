@@ -34,6 +34,11 @@ export class SQLiteProgressRepository implements IProgressRepository {
     await db.runAsync('DELETE FROM user_progress_nodes WHERE userId = ? AND nodeId = ?', [userId, nodeId]);
   }
 
+  async deleteByUserId(userId: string): Promise<void> {
+    const db = await SQLiteClient.getInstance();
+    await db.runAsync('DELETE FROM user_progress_nodes WHERE userId = ?', [userId]);
+  }
+
   async resetAll(userId: string): Promise<void> {
     const db = await SQLiteClient.getInstance();
     await db.runAsync(

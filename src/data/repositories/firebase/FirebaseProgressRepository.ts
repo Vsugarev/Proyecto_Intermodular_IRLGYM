@@ -32,6 +32,10 @@ export class FirebaseProgressRepository implements IProgressRepository {
     await deleteDoc(doc(db, this.col, id));
   }
 
+  async deleteByUserId(userId: string): Promise<void> {
+    await this.resetAll(userId);
+  }
+
   async resetAll(userId: string): Promise<void> {
     const q = query(collection(db, this.col), where('userId', '==', userId));
     const snap = await getDocs(q);

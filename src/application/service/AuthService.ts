@@ -25,7 +25,9 @@ export class AuthService {
       const newProfile: UserProfile = { 
         id: uid, 
         username, 
-        avatarUrl: '' 
+        email,
+        avatarUrl: '',
+        measurementUnits: 'kg'
       };
       
       const newStats: UserStats = {
@@ -84,7 +86,13 @@ export class AuthService {
       ]);
       
       if (cloudProfile) await UserProfileRepository.save(cloudProfile);
-      else await UserProfileRepository.save({ id: uid, username: 'Guerrero', avatarUrl: '' });
+      else await UserProfileRepository.save({ 
+        id: uid, 
+        username: 'Guerrero', 
+        email: 'warrior@irlgym.com', 
+        avatarUrl: '', 
+        measurementUnits: 'kg' 
+      });
 
       if (cloudStats) await UserStatsRepository.save(cloudStats);
 
@@ -117,6 +125,38 @@ export class AuthService {
       await signOut(auth);
     } catch (error: any) {
       throw new Error("Error al cerrar sesión");
+    }
+  }
+
+  static async deleteAccount() {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    try {
+      const uid = user.uid;
+      const { 
+        UserProfileRepository, 
+        UserStatsRepository, 
+        WorkoutRepository, 
+        ProgressRepository,
+        LogRepository
+      } = require('../../data/repositories/index');
+
+      // 1. Borrar en la nube y localmente usando Repositorios Híbridos
+      await UserProfileRepository.delete(uid);
+      await UserStatsRepository.deleteByUserId(uid);
+      await ProgressRepository.deleteByUserId(uid);
+      await LogRepository.deleteByUserId(uid);
+      await WorkoutRepository.deleteByUserId(uid);
+      
+      // 3. Borrar el usuario de Auth
+      await user.delete();
+    } catch (error: any) {
+      console.error("Error deleting account:", error);
+      if (error.code === 'auth/requires-recent-login') {
+        throw new Error("Por seguridad, Firebase requiere que hayas iniciado sesión RECIENTEMENTE para borrar tu cuenta. Por favor, cierra sesión, vuelve a entrar y prueba de nuevo.");
+      }
+      throw new Error(`Error: ${error.message || "No se pudo eliminar la cuenta por completo."}`);
     }
   }
 

@@ -50,4 +50,23 @@ export class FirebaseLogRepository implements ILogRepository {
     snap.docs.forEach(d => batch.delete(d.ref));
     await batch.commit();
   }
+
+  async deleteByUserId(userId: string): Promise<void> {
+    // Primero necesitamos los IDs de los workouts del usuario
+    const qWorkouts = query(collection(db, 'workouts'), where('userId', '==', userId));
+    const workoutSnaps = await getDocs(qWorkouts);
+    const workoutIds = workoutSnaps.docs.map(d => d.id);
+
+    if (workoutIds.length === 0) return;
+
+    // Firebase tiene un límite de 10 en 'in'. Si hay más, lo hacemos por lotes o iteramos
+    for (let i = 0; i < workoutIds.length; i += 10) {
+      const chunk = workoutIds.slice(i, i + 10);
+      const qLogs = query(collection(db, this.colName), where('workoutId', 'in', chunk));
+      const logSnaps = await getDocs(qLogs);
+      const batch = writeBatch(db);
+      logSnaps.docs.forEach(d => batch.delete(d.ref));
+      await batch.commit();
+    }
+  }
 }

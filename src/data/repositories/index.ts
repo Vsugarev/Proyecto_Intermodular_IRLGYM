@@ -68,6 +68,32 @@ class HybridRepository {
     }
   }
 
+  async deleteByUserId(userId: string) {
+    if (this.local.deleteByUserId) {
+      await this.local.deleteByUserId(userId);
+    }
+    try {
+      if (this.cloud.deleteByUserId) {
+        await this.cloud.deleteByUserId(userId);
+      }
+    } catch (e) {
+      console.log("Error cloud deleteByUserId");
+    }
+  }
+
+  async resetAll(userId: string) {
+    if (this.local.resetAll) {
+      await this.local.resetAll(userId);
+    }
+    try {
+      if (this.cloud.resetAll) {
+        await this.cloud.resetAll(userId);
+      }
+    } catch (e) {
+      console.log("Error cloud resetAll");
+    }
+  }
+
   async findById(id: string) { return await this.local.findById(id); }
   async findByUserId(userId: string) { return await this.local.findByUserId(userId); }
   async findAllByUserId(userId: string) { return await this.local.findAllByUserId(userId); }
