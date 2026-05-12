@@ -47,7 +47,11 @@ export const ExerciseService = {
     const exData = await this.getExerciseById(exerciseId);
     if (!exData) return null;
 
-    const logs = await LogRepository.findByExerciseId(exerciseId);
+    const { auth } = require('../../infrastructure/config/firebase');
+    const uid = auth.currentUser?.uid;
+    if (!uid) return null;
+
+    const logs = await LogRepository.findByExerciseId(exerciseId, uid);
     
     // Traemos info del workout para filtrar (Clean Architecture: lógica de negocio en servicio)
     const logsWithWorkoutInfo = await Promise.all(logs.map(async (log: WorkoutLog) => {

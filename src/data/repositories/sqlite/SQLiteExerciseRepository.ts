@@ -62,11 +62,17 @@ export class SQLiteExerciseRepository implements IExerciseRepository {
     await db.runAsync('DELETE FROM library_exercises WHERE id = ?', [id]);
   }
 
-  async updateFavorite(id: string, isFavorite: number) {
+  async updateFavorite(id: string, isFavorite: number): Promise<void> {
     const db = await SQLiteClient.getInstance();
     await db.runAsync(
       'UPDATE library_exercises SET is_favorite = ? WHERE id = ?',
       [isFavorite, id]
     );
   }
-}
+
+  async clearUserData(): Promise<void> {
+    const db = await SQLiteClient.getInstance();
+    await db.runAsync('UPDATE library_exercises SET is_favorite = 0');
+    await db.runAsync('DELETE FROM library_exercises WHERE is_custom = 1');
+  }
+}

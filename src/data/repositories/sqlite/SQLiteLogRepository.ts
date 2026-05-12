@@ -31,9 +31,12 @@ export class SQLiteLogRepository implements ILogRepository {
     return rows.map(row => ({ ...row, series: JSON.parse(row.series_json) }));
   }
 
-  async findByExerciseId(exerciseId: string): Promise<WorkoutLog[]> {
+  async findByExerciseId(exerciseId: string, userId: string): Promise<WorkoutLog[]> {
     const db = await SQLiteClient.getInstance();
-    const rows = await db.getAllAsync<any>('SELECT * FROM workout_logs WHERE exerciseId = ?', [exerciseId]);
+    const rows = await db.getAllAsync<any>(
+      'SELECT wl.* FROM workout_logs wl JOIN workouts w ON wl.workoutId = w.id WHERE wl.exerciseId = ? AND w.userId = ?', 
+      [exerciseId, userId]
+    );
     return rows.map(row => ({ ...row, series: JSON.parse(row.series_json) }));
   }
 

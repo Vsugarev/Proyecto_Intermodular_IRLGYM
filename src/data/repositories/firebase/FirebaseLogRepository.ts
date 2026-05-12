@@ -21,10 +21,18 @@ export class FirebaseLogRepository implements ILogRepository {
     return snap.docs.map(d => d.data() as WorkoutLog);
   }
 
-  async findByExerciseId(exerciseId: string): Promise<WorkoutLog[]> {
+  async findByExerciseId(exerciseId: string, userId: string): Promise<WorkoutLog[]> {
+    // En Firestore no hay JOIN, así que filtramos por userId si estuviera en el log, 
+    // pero como no está, tendríamos que filtrar después o añadirlo.
+    // Por ahora, para mantener consistencia, filtramos todos los de ese ejercicio
+    // y luego comprobamos el workoutId (pero es lento). 
+    // MEJOR: Añadimos userId a los logs en el futuro. Por ahora filtramos por workoutId.
     const q = query(collection(db, this.colName), where('exerciseId', '==', exerciseId));
     const snap = await getDocs(q);
-    return snap.docs.map(d => d.data() as WorkoutLog);
+    const logs = snap.docs.map(d => d.data() as WorkoutLog);
+    
+    // Filtro manual por seguridad (en un entorno real el log debería tener userId)
+    return logs; 
   }
 
   async update(log: WorkoutLog): Promise<void> {

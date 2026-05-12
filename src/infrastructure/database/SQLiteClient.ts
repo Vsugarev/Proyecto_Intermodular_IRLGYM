@@ -8,7 +8,8 @@ export class SQLiteClient {
     if (this.instance) return this.instance;
 
     if (!this.promise) {
-      this.promise = SQLite.openDatabaseAsync('gym_rpg.db').then(db => {
+      this.promise = SQLite.openDatabaseAsync('gym_rpg.db').then(async (db) => {
+        await db.execAsync('PRAGMA foreign_keys = ON;');
         this.instance = db;
         return db;
       });
