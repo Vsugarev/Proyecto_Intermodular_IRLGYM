@@ -13,7 +13,14 @@ export class SQLiteSkillRepository implements ISkillRepository {
   async save(node: SkillNode): Promise<void> {
     const db = await SQLiteClient.getInstance();
     await db.runAsync(
-      'INSERT OR REPLACE INTO skill_nodes (id, title, branch, requirements_json, prev_node_id, xp_reward) VALUES (?, ?, ?, ?, ?, ?)',
+      `INSERT INTO skill_nodes (id, title, branch, requirements_json, prev_node_id, xp_reward) 
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET
+         title=excluded.title,
+         branch=excluded.branch,
+         requirements_json=excluded.requirements_json,
+         prev_node_id=excluded.prev_node_id,
+         xp_reward=excluded.xp_reward`,
       [node.id, node.title, node.branch, node.requirementsJson, node.prevNodeId, node.xpReward]
     );
   }

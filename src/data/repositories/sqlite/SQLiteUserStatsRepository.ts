@@ -6,7 +6,13 @@ export class SQLiteUserStatsRepository implements IUserStatsRepository {
   async save(stats: UserStats): Promise<void> {
     const db = await SQLiteClient.getInstance();
     await db.runAsync(
-      'INSERT OR REPLACE INTO user_stats (userId, current_xp, level, streak_count, last_workout_date) VALUES (?, ?, ?, ?, ?)',
+      `INSERT INTO user_stats (userId, current_xp, level, streak_count, last_workout_date) 
+       VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT(userId) DO UPDATE SET
+         current_xp=excluded.current_xp,
+         level=excluded.level,
+         streak_count=excluded.streak_count,
+         last_workout_date=excluded.last_workout_date`,
       [stats.userId, stats.currentXp, stats.level, stats.streakCount, stats.lastWorkoutDate ?? null]
     );
   }

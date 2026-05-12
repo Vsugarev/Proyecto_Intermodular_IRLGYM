@@ -6,8 +6,16 @@ export class SQLiteUserProfileRepository implements IUserProfileRepository {
   async save(profile: UserProfile): Promise<void> {
     const db = await SQLiteClient.getInstance();
     await db.runAsync(
-      'INSERT OR REPLACE INTO profiles (id, username, email, avatar_url, weight, measurement_units, sync_status) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [profile.id, profile.username, profile.email, profile.avatarUrl ?? null, profile.weight ?? null, profile.measurementUnits, 1]
+      `INSERT INTO profiles (id, username, email, avatar_url, weight, measurement_units, sync_status) 
+       VALUES (?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET
+         username=excluded.username,
+         email=excluded.email,
+         avatar_url=excluded.avatar_url,
+         weight=excluded.weight,
+         measurement_units=excluded.measurement_units,
+         sync_status=1`,
+      [profile.id, profile.username, profile.email, profile.avatarUrl ?? null, profile.weight ?? null, profile.measurementUnits]
     );
   }
 
