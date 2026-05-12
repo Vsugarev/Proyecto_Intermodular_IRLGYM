@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, FlatList, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, FlatList, KeyboardAvoidingView, Platform, SafeAreaView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { WorkoutService } from '../../../application/service/WorkoutService';
 import { LogService } from '../../../application/service/LogService';
 import { ExerciseService } from '../../../application/service/ExerciseService';
 import { SkillService } from '../../../application/service/SkillService';
 import { WorkoutLog, Set } from '../../../domain/entities/Workout';
+import { Theme } from '../../styles/theme';
 
 interface ExerciseWithLog extends WorkoutLog {
   exerciseName: string;
@@ -38,8 +39,6 @@ export const RoutineEditScreen = ({ route, navigation }: { route: any, navigatio
         } as ExerciseWithLog;
       }));
       setExercises(logsWithDetails);
-      
-      // Guardamos la huella digital de la estructura original (Rutine-view-03 Smart)
       const structure = logsWithDetails.map(ex => `${ex.exerciseId}:${ex.series.length}`).join('|');
       setOriginalStructure(structure);
     } catch (e) {
@@ -47,63 +46,26 @@ export const RoutineEditScreen = ({ route, navigation }: { route: any, navigatio
     }
   };
 
-  const handleUpdate = async () => {
-    if (saving) return;
-
-    // Calculamos la estructura actual para ver si ha cambiado (Smart Alert)
-    const currentStructure = exercises.map(ex => `${ex.exerciseId}:${ex.series.length}`).join('|');
-    const hasStructureChanged = currentStructure !== originalStructure;
-
-    if (routine?.status === 'in_progress' && routine?.parentId && hasStructureChanged) {
-      Alert.alert(
-        "¿Actualizar rutina original?",
-        "Has detectado cambios en la estructura (ejercicios o series). ¿Quieres guardarlos como el nuevo estándar de esta rutina?",
-        [
-          { 
-            text: "No, solo hoy", 
-            onPress: () => performSave(false),
-            style: "cancel"
-          },
-          { 
-            text: "Sí, actualizar", 
-            onPress: () => performSave(true) 
-          }
-        ]
-      );
-    } else {
-      // Si no hay cambios estructurales o no hay parentId, guardamos normal
-      performSave(false);
-    }
-  };
-
   const performSave = async (updateTemplate: boolean) => {
     try {
       setSaving(true);
       const updatedStatus = routine?.status === 'in_progress' ? 'completed' : routine?.status;
-      
-      // 1. Guardamos la sesión actual
       await WorkoutService.updateWorkout({ ...routine, name, status: updatedStatus });
       for (const log of exercises) {
         await LogService.saveLog(log);
       }
 
-      // Añadimos experiencia si la rutina se acaba de completar
       if (routine?.status === 'in_progress' && updatedStatus === 'completed' && routine.userId) {
-        const xpEarned = 100 + (exercises.length * 20); // 100 XP base + 20 XP por ejercicio
+        const xpEarned = 100 + (exercises.length * 20);
         await SkillService.addExperience(routine.userId, xpEarned);
       }
 
-      // 2. Si el usuario quiere que esta sea su nueva "plantilla" predeterminada
       if (updateTemplate && routine.parentId) {
-        // Actualizamos también el nombre de la rutina original por si lo ha cambiado
         const parentWorkout = await WorkoutService.getWorkoutById(routine.parentId);
         if (parentWorkout) {
           await WorkoutService.updateWorkout({ ...parentWorkout, name });
-          
-          // Reemplazamos los ejercicios de la plantilla por los actuales (Hevy style)
           const { LogRepository } = require('../../../data/repositories/index');
           await LogRepository.deleteByWorkoutId(routine.parentId);
-
           for (const log of exercises) {
             await LogService.saveLog({
               ...log,
@@ -118,57 +80,29 @@ export const RoutineEditScreen = ({ route, navigation }: { route: any, navigatio
       Alert.alert("Éxito", routine?.status === 'in_progress' ? "Entrenamiento finalizado" : "Cambios guardados");
       navigation.goBack();
     } catch (e: any) {
-      console.error(e);
-      Alert.alert("Error", "No se pudo guardar los cambios");
+      Alert.alert("Error", "No se pudo guardar");
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDiscard = () => {
-    Alert.alert(
-      "Descartar", 
-      "¿Estás seguro de que quieres borrar este entrenamiento? Se perderán todos los datos registrados.", 
-      [
-        { text: "No, continuar", style: "cancel" },
-        { 
-          text: "Sí, borrar", 
-          style: "destructive", 
-          onPress: async () => {
-            await WorkoutService.deleteWorkout(routine.id);
-            navigation.goBack();
-          } 
-        }
-      ]
-    );
-  };
+  const handleUpdate = async () => {
+    if (saving) return;
+    const currentStructure = exercises.map(ex => `${ex.exerciseId}:${ex.series.length}`).join('|');
+    const hasStructureChanged = currentStructure !== originalStructure;
 
-  const handleDelete = () => {
-    Alert.alert("Eliminar", "¿Borrar esta rutina?", [
-      { text: "Cancelar", style: "cancel" },
-      {
-        text: "Borrar", style: "destructive", onPress: async () => {
-          await WorkoutService.deleteWorkout(routine.id);
-          navigation.goBack();
-        }
-      }
-    ]);
-  };
-
-  const openExerciseLibrary = () => {
-    navigation.navigate('ExerciseLibrary', {
-      isSelecting: true,
-      onSelect: (selectedExercise: any) => {
-        const newLog: ExerciseWithLog = {
-          id: `log_${Date.now()}`,
-          exerciseId: selectedExercise.id,
-          exerciseName: selectedExercise.name,
-          workoutId: routine.id,
-          series: [{ kg: 0, reps: 0, type: 'R', rpe: 0 }]
-        };
-        setExercises(prev => [...prev, newLog]);
-      }
-    });
+    if (routine?.status === 'in_progress' && routine?.parentId && hasStructureChanged) {
+      Alert.alert(
+        "¿Actualizar plantilla?",
+        "¿Quieres guardar estos cambios de estructura en la rutina original?",
+        [
+          { text: "No, solo hoy", onPress: () => performSave(false), style: "cancel" },
+          { text: "Sí, actualizar", onPress: () => performSave(true) }
+        ]
+      );
+    } else {
+      performSave(false);
+    }
   };
 
   const addSet = (logId: string) => {
@@ -189,27 +123,16 @@ export const RoutineEditScreen = ({ route, navigation }: { route: any, navigatio
     }));
   };
 
-  const removeSet = (logId: string, setIndex: number) => {
-    setExercises(prev => prev.map(ex => {
-      if (ex.id === logId) {
-        return { ...ex, series: ex.series.filter((_, i) => i !== setIndex) };
-      }
-      return ex;
-    }));
-  };
-
   const updateSet = (logId: string, setIndex: number, field: keyof Set, value: string) => {
     setExercises(prev => prev.map(ex => {
       if (ex.id === logId) {
         const newSeries = [...ex.series];
         let numValue = parseFloat(value) || 0;
-        
         if (field === 'type') {
           newSeries[setIndex] = { ...newSeries[setIndex], [field]: value as any };
         } else {
           newSeries[setIndex] = { ...newSeries[setIndex], [field]: numValue };
         }
-        
         return { ...ex, series: newSeries };
       }
       return ex;
@@ -230,21 +153,20 @@ export const RoutineEditScreen = ({ route, navigation }: { route: any, navigatio
     }));
   };
 
-  const removeExercise = (logId: string) => {
-    Alert.alert("Eliminar", "¿Quitar este ejercicio?", [
-      { text: "No", style: "cancel" },
-      { text: "Sí", style: "destructive", onPress: () => {
-        setExercises(prev => prev.filter(ex => ex.id !== logId));
-      }}
-    ]);
-  };
-
-  const moveExercise = (index: number, direction: 'up' | 'down') => {
-    const newExercises = [...exercises];
-    const nextIndex = direction === 'up' ? index - 1 : index + 1;
-    if (nextIndex < 0 || nextIndex >= newExercises.length) return;
-    [newExercises[index], newExercises[nextIndex]] = [newExercises[nextIndex], newExercises[index]];
-    setExercises(newExercises);
+  const openExerciseLibrary = () => {
+    navigation.navigate('ExerciseLibrary', {
+      isSelecting: true,
+      onSelect: (selectedExercise: any) => {
+        const newLog: ExerciseWithLog = {
+          id: `log_${Date.now()}`,
+          exerciseId: selectedExercise.id,
+          exerciseName: selectedExercise.name,
+          workoutId: routine.id,
+          series: [{ kg: 0, reps: 0, type: 'R', rpe: 0 }]
+        };
+        setExercises(prev => [...prev, newLog]);
+      }
+    });
   };
 
   const renderSetRow = (set: Set, index: number, logId: string) => {
@@ -261,43 +183,43 @@ export const RoutineEditScreen = ({ route, navigation }: { route: any, navigatio
         </TouchableOpacity>
 
         <View style={styles.inputWrapper}>
-          <Text style={styles.previousLabel}>{prevSet ? `${prevSet.kg}kg` : '-'}</Text>
+          <Text style={styles.previousLabel}>{prevSet ? `${prevSet.kg}k` : '-'}</Text>
           <TextInput
             style={styles.setInput}
             keyboardType="numeric"
             value={set.kg === 0 ? '' : set.kg.toString()}
             onChangeText={(v) => updateSet(logId, index, 'kg', v)}
             placeholder="0"
-            selectTextOnFocus
+            placeholderTextColor={Theme.colors.textSecondary}
           />
         </View>
         
         <View style={styles.inputWrapper}>
-          <Text style={styles.previousLabel}>{prevSet ? `${prevSet.reps} reps` : '-'}</Text>
+          <Text style={styles.previousLabel}>{prevSet ? `${prevSet.reps}r` : '-'}</Text>
           <TextInput
             style={styles.setInput}
             keyboardType="numeric"
             value={set.reps === 0 ? '' : set.reps.toString()}
             onChangeText={(v) => updateSet(logId, index, 'reps', v)}
             placeholder="0"
-            selectTextOnFocus
+            placeholderTextColor={Theme.colors.textSecondary}
           />
         </View>
 
         <View style={styles.inputWrapper}>
-          <Text style={styles.previousLabel}>{prevSet && prevSet.rpe ? `RPE ${prevSet.rpe}` : '-'}</Text>
+          <Text style={styles.previousLabel}>{prevSet && prevSet.rpe ? `E${prevSet.rpe}` : '-'}</Text>
           <TextInput
             style={styles.setInput}
             keyboardType="numeric"
             value={set.rpe === 0 ? '' : set.rpe?.toString()}
             onChangeText={(v) => updateSet(logId, index, 'rpe', v)}
             placeholder="0"
-            selectTextOnFocus
+            placeholderTextColor={Theme.colors.textSecondary}
           />
         </View>
 
-        <TouchableOpacity onPress={() => removeSet(logId, index)} style={styles.deleteSetBtn}>
-          <Ionicons name="close-circle-outline" size={20} color="#ff4444" />
+        <TouchableOpacity onPress={() => {}} style={styles.deleteSetBtn}>
+          <Ionicons name="trash-outline" size={16} color={Theme.colors.danger} />
         </TouchableOpacity>
       </View>
     );
@@ -312,186 +234,127 @@ export const RoutineEditScreen = ({ route, navigation }: { route: any, navigatio
         >
           <Text style={styles.exerciseName}>{item.exerciseName}</Text>
         </TouchableOpacity>
-        <View style={styles.exerciseActions}>
-          <TouchableOpacity onPress={() => moveExercise(index, 'up')} style={styles.actionIcon}>
-            <Ionicons name="chevron-up" size={20} color="#888" />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => moveExercise(index, 'down')} style={styles.actionIcon}>
-            <Ionicons name="chevron-down" size={20} color="#888" />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => removeExercise(item.id)} style={styles.actionIcon}>
-            <Ionicons name="trash-outline" size={20} color="#ff4444" />
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity onPress={() => {
+          Alert.alert(
+            "Eliminar Ejercicio",
+            "¿Estás seguro de que quieres quitar este ejercicio de la rutina?",
+            [
+              { text: "Cancelar", style: "cancel" },
+              { 
+                text: "Eliminar", 
+                style: "destructive", 
+                onPress: () => setExercises(prev => prev.filter(ex => ex.id !== item.id)) 
+              }
+            ]
+          );
+        }}>
+          <Ionicons name="trash-outline" size={20} color={Theme.colors.danger} />
+        </TouchableOpacity>
       </View>
 
       <View style={styles.setTableHeader}>
-        <Text style={[styles.setTableLabel, { width: 40 }]}>SERIE</Text>
-        <Text style={[styles.setTableLabel, { flex: 1 }]}>KG</Text>
+        <Text style={[styles.setTableLabel, { width: 32 }]}>SET</Text>
+        <Text style={[styles.setTableLabel, { flex: 1 }]}>PESO</Text>
         <Text style={[styles.setTableLabel, { flex: 1 }]}>REPS</Text>
         <Text style={[styles.setTableLabel, { flex: 1 }]}>RPE</Text>
-        <View style={{ width: 30 }} />
+        <View style={{ width: 24 }} />
       </View>
 
       {item.series.map((set, idx) => renderSetRow(set, idx, item.id))}
 
       <TouchableOpacity style={styles.addSetBtn} onPress={() => addSet(item.id)}>
-        <Text style={styles.addSetText}>+ AÑADIR SERIE</Text>
+        <Ionicons name="add" size={16} color={Theme.colors.success} />
+        <Text style={styles.addSetText}>AÑADIR SERIE</Text>
       </TouchableOpacity>
     </View>
   );
 
   return (
-    <KeyboardAvoidingView 
-      style={{ flex: 1 }} 
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={100}
-    >
-      <FlatList
-        data={exercises}
-        keyExtractor={(item) => item.id}
-        renderItem={renderExerciseItem}
-        contentContainerStyle={styles.listContent}
-        ListHeaderComponent={
-          <View style={styles.header}>
-            <Text style={styles.sectionLabel}>Nombre de la Rutina</Text>
-            <TextInput 
-              style={styles.routineNameInput} 
-              value={name} 
-              onChangeText={setName}
-              placeholder="Ej: Empuje A"
-            />
-          </View>
-        }
-        ListFooterComponent={
-          <View style={styles.footer}>
-            <TouchableOpacity style={styles.addExerciseBtn} onPress={openExerciseLibrary}>
-              <Ionicons name="add-circle" size={24} color="#28a745" />
-              <Text style={styles.addExerciseText}>AÑADIR EJERCICIO</Text>
-            </TouchableOpacity>
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+        <FlatList
+          data={exercises}
+          keyExtractor={(item) => item.id}
+          renderItem={renderExerciseItem}
+          contentContainerStyle={styles.listContent}
+          ListHeaderComponent={
+            <View style={styles.header}>
+              <TextInput 
+                style={styles.routineNameInput} 
+                value={name} 
+                onChangeText={setName}
+                placeholder="Nombre de la rutina"
+                placeholderTextColor={Theme.colors.textSecondary}
+              />
+            </View>
+          }
+          ListFooterComponent={
+            <View style={styles.footer}>
+              <TouchableOpacity style={styles.addExerciseBtn} onPress={openExerciseLibrary}>
+                <Ionicons name="add-circle" size={20} color={Theme.colors.success} />
+                <Text style={styles.addExerciseText}>AÑADIR EJERCICIO</Text>
+              </TouchableOpacity>
 
-            <View style={styles.finalActions}>
               <TouchableOpacity 
-                style={[styles.saveBtn, routine?.status === 'in_progress' && styles.finishBtn, saving && { opacity: 0.7 }]} 
+                style={[styles.saveBtn, routine?.status === 'in_progress' && styles.finishBtn]} 
                 onPress={handleUpdate}
                 disabled={saving}
               >
                 <Text style={styles.saveBtnText}>
-                  {saving ? 'GUARDANDO...' : (routine?.status === 'in_progress' ? 'FINALIZAR ENTRENAMIENTO' : 'GUARDAR RUTINA')}
+                  {saving ? 'GUARDANDO...' : (routine?.status === 'in_progress' ? 'FINALIZAR' : 'GUARDAR')}
                 </Text>
               </TouchableOpacity>
-              
-              {routine?.status === 'in_progress' ? (
-                <TouchableOpacity style={styles.discardBtn} onPress={handleDiscard}>
-                  <Text style={styles.discardBtnText}>DESCARTAR ENTRENAMIENTO</Text>
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity style={styles.deleteRoutineBtn} onPress={handleDelete}>
-                  <Text style={styles.deleteRoutineText}>Eliminar Rutina</Text>
-                </TouchableOpacity>
-              )}
             </View>
-          </View>
-        }
-      />
-    </KeyboardAvoidingView>
+          }
+        />
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  listContent: { padding: 16, backgroundColor: '#f5f5f7' },
-  header: { marginBottom: 20 },
-  sectionLabel: { fontSize: 12, fontWeight: '700', color: '#8e8e93', marginBottom: 8, textTransform: 'uppercase' },
-  routineNameInput: { 
-    fontSize: 24, 
-    fontWeight: 'bold', 
-    color: '#000', 
-    backgroundColor: 'transparent',
-    padding: 0
-  },
+  container: { flex: 1, backgroundColor: Theme.colors.background },
+  listContent: { padding: Theme.spacing.md },
+  header: { marginBottom: Theme.spacing.lg, marginTop: Theme.spacing.md },
+  routineNameInput: { ...Theme.typography.h1, fontSize: 26, padding: 0 },
   exerciseCard: { 
-    backgroundColor: '#fff', 
-    borderRadius: 16, 
-    padding: 16, 
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2
+    backgroundColor: Theme.colors.card, 
+    borderRadius: Theme.roundness.lg, 
+    padding: Theme.spacing.md, 
+    marginBottom: Theme.spacing.md,
+    borderWidth: 1, borderColor: Theme.colors.border
   },
-  exerciseHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 15 },
-  exerciseName: { fontSize: 18, fontWeight: '700', color: '#000' },
-  exerciseActions: { flexDirection: 'row' },
-  actionIcon: { marginLeft: 15 },
-  setTableHeader: { flexDirection: 'row', marginBottom: 8, paddingHorizontal: 4 },
-  setTableLabel: { fontSize: 10, fontWeight: 'bold', color: '#8e8e93', textAlign: 'center' },
-  setRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  inputWrapper: { flex: 1, marginHorizontal: 2 },
-  previousLabel: { fontSize: 9, color: '#c7c7cc', textAlign: 'center', marginBottom: 2, fontWeight: '600' },
-  setTypeBadge: { 
-    width: 24, 
-    height: 24, 
-    borderRadius: 12, 
-    justifyContent: 'center', 
-    alignItems: 'center',
-    marginRight: 8,
-    backgroundColor: '#eee'
-  },
-  setType_R: { backgroundColor: '#e5e5ea' },
-  setType_W: { backgroundColor: '#ffcc00' },
-  setType_D: { backgroundColor: '#af52de' },
-  setType_F: { backgroundColor: '#ff3b30' },
-  setTypeText: { fontSize: 10, fontWeight: 'bold', color: '#000' },
+  exerciseHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
+  exerciseName: { ...Theme.typography.h3, color: Theme.colors.primary },
+  setTableHeader: { flexDirection: 'row', marginBottom: 10 },
+  setTableLabel: { ...Theme.typography.caption, fontSize: 9, fontWeight: '900', textAlign: 'center' },
+  setRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
+  inputWrapper: { flex: 1, marginHorizontal: 3 },
+  previousLabel: { ...Theme.typography.caption, fontSize: 8, textAlign: 'center', marginBottom: 2 },
+  setTypeBadge: { width: 24, height: 24, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 8 },
+  setType_R: { backgroundColor: Theme.colors.cardLight },
+  setType_W: { backgroundColor: Theme.colors.warning },
+  setType_D: { backgroundColor: Theme.colors.primary },
+  setType_F: { backgroundColor: Theme.colors.danger },
+  setTypeText: { fontSize: 10, fontWeight: 'bold', color: '#fff' },
   setInput: { 
-    flex: 1, 
-    backgroundColor: '#f2f2f7', 
-    borderRadius: 6, 
-    height: 36, 
-    textAlign: 'center', 
-    fontSize: 15, 
-    fontWeight: '600',
-    color: '#1c1c1e',
-    paddingVertical: 0
+    backgroundColor: Theme.colors.cardLight, borderRadius: 6, height: 34, 
+    textAlign: 'center', fontSize: 14, fontWeight: '700', color: Theme.colors.text
   },
-  deleteSetBtn: { width: 30, alignItems: 'center', marginLeft: 5 },
+  deleteSetBtn: { width: 24, alignItems: 'center' },
   addSetBtn: { 
-    marginTop: 10, 
-    paddingVertical: 10, 
-    alignItems: 'center', 
-    borderTopWidth: 1, 
-    borderTopColor: '#f2f2f7' 
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    marginTop: 10, paddingVertical: 10, borderTopWidth: 1, borderTopColor: Theme.colors.border
   },
-  addSetText: { color: '#28a745', fontWeight: 'bold', fontSize: 13 },
-  footer: { marginTop: 10, marginBottom: 40 },
+  addSetText: { color: Theme.colors.success, fontWeight: '800', fontSize: 12 },
+  footer: { marginTop: Theme.spacing.md, marginBottom: 40 },
   addExerciseBtn: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    padding: 15, 
-    backgroundColor: '#fff', 
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e5e5ea',
-    borderStyle: 'dashed'
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', 
+    padding: 15, backgroundColor: Theme.colors.card, borderRadius: Theme.roundness.md,
+    borderWidth: 1, borderColor: Theme.colors.border, borderStyle: 'dashed', marginBottom: 25
   },
-  addExerciseText: { marginLeft: 8, color: '#28a745', fontWeight: 'bold' },
-  finalActions: { marginTop: 30 },
-  saveBtn: { 
-    backgroundColor: '#28a745', 
-    padding: 18, 
-    borderRadius: 14, 
-    alignItems: 'center',
-    shadowColor: '#28a745',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4
-  },
-  finishBtn: { backgroundColor: '#007aff', shadowColor: '#007aff' },
-  saveBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
-  deleteRoutineBtn: { marginTop: 20, alignItems: 'center' },
-  deleteRoutineText: { color: '#ff3b30', fontWeight: '600' },
-  discardBtn: { marginTop: 20, alignItems: 'center', backgroundColor: '#ffe5e5', padding: 15, borderRadius: 12 },
-  discardBtnText: { color: '#ff3b30', fontWeight: 'bold', fontSize: 14 }
+  addExerciseText: { marginLeft: 8, color: Theme.colors.success, fontWeight: '800' },
+  saveBtn: { backgroundColor: Theme.colors.success, padding: 18, borderRadius: Theme.roundness.lg, alignItems: 'center' },
+  finishBtn: { backgroundColor: Theme.colors.primary },
+  saveBtnText: { color: '#fff', fontWeight: '900', fontSize: 16 }
 });

@@ -1,11 +1,12 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, FlatList, ActivityIndicator, Animated } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, FlatList, ActivityIndicator, Animated, SafeAreaView } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { WorkoutService } from '../../../application/service/WorkoutService';
 import { SkillService } from '../../../application/service/SkillService';
 import { auth } from '../../../infrastructure/config/firebase';
 import { Workout } from '../../../domain/entities/Workout';
+import { Theme } from '../../styles/theme';
 
 export const HomeScreen = ({ navigation }: { navigation: any }) => {
   const [templates, setTemplates] = useState<Workout[]>([]);
@@ -75,13 +76,13 @@ export const HomeScreen = ({ navigation }: { navigation: any }) => {
     return (
       <TouchableOpacity 
         style={styles.skillWidget} 
-        onPress={() => navigation.navigate('Skills')}
+        onPress={() => navigation.navigate('Progreso')}
         activeOpacity={0.9}
       >
         <View style={styles.widgetHeader}>
           <View style={styles.widgetTitleRow}>
             <View style={styles.trophyBg}>
-              <Ionicons name="trophy" size={18} color="#ffd700" />
+              <Ionicons name="trophy" size={18} color={Theme.colors.accent} />
             </View>
             <Text style={styles.widgetTitle}>Progreso de Guerrero</Text>
           </View>
@@ -105,7 +106,7 @@ export const HomeScreen = ({ navigation }: { navigation: any }) => {
         {nextNode ? (
           <View style={styles.nextSkillCard}>
             <View style={styles.nextInfo}>
-              <Text style={styles.nextLabel}>SIGUIENTE OBJETIVO:</Text>
+              <Text style={styles.nextLabel}>PRÓXIMO OBJETIVO</Text>
               <Text style={styles.nextNodeTitle}>{nextNode.title}</Text>
             </View>
             <View style={styles.reqSummary}>
@@ -114,7 +115,7 @@ export const HomeScreen = ({ navigation }: { navigation: any }) => {
                   <Ionicons 
                     name={req.met ? "checkmark-circle" : "ellipse-outline"} 
                     size={12} 
-                    color={req.met ? "#28a745" : "#8e8e93"} 
+                    color={req.met ? Theme.colors.success : Theme.colors.textSecondary} 
                   />
                   <Text style={[styles.reqMiniText, req.met && styles.reqMetText]}>
                     {req.label} ({req.current}/{req.required}{req.unit})
@@ -124,7 +125,7 @@ export const HomeScreen = ({ navigation }: { navigation: any }) => {
             </View>
           </View>
         ) : (
-          <Text style={styles.allDoneText}>¡Has dominado todas las sendas!</Text>
+          <Text style={styles.allDoneText}>¡Máximo nivel alcanzado!</Text>
         )}
       </TouchableOpacity>
     );
@@ -137,162 +138,200 @@ export const HomeScreen = ({ navigation }: { navigation: any }) => {
       onPress={() => handleStartRoutine(item.id)}
       activeOpacity={0.7}
     >
+      <View style={styles.routineIconContainer}>
+        <Ionicons name="fitness" size={24} color={Theme.colors.primary} />
+      </View>
+
       <View style={styles.routineInfo}>
         <Text style={styles.routineName}>{item.name}</Text>
         <View style={styles.routineMeta}>
-          <Ionicons name="calendar-outline" size={12} color="#8e8e93" />
+          <Ionicons name="time-outline" size={12} color={Theme.colors.textSecondary} />
           <Text style={styles.routineDate}>{new Date(item.date).toLocaleDateString()}</Text>
         </View>
       </View>
       
-      <TouchableOpacity 
-        style={styles.startIconBtn} 
-        onPress={() => handleStartRoutine(item.id)}
-      >
-        <Ionicons name="play" size={24} color="#28a745" />
-      </TouchableOpacity>
+      <View style={styles.cardActionRow}>
+        <TouchableOpacity 
+           style={styles.editBtn} 
+           onPress={() => navigation.navigate('EditRoutine', { routine: item })}
+        >
+          <Ionicons name="settings-outline" size={20} color={Theme.colors.textSecondary} />
+        </TouchableOpacity>
+        <View style={styles.playBtn}>
+          <Ionicons name="play" size={20} color={Theme.colors.text} />
+        </View>
+      </View>
     </TouchableOpacity>
   );
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.welcomeText}>¡Hola!</Text>
-          <Text style={styles.title}>Panel de Guerrero</Text>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.content}>
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.welcomeText}>Panel Principal</Text>
+            <Text style={styles.title}>IRLGYM <Text style={{color: Theme.colors.success}}>WARRIOR</Text></Text>
+          </View>
+          <TouchableOpacity style={styles.profileIcon}>
+            <Ionicons name="person-circle" size={44} color={Theme.colors.cardLight} />
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity style={styles.profileIcon}>
-          <Ionicons name="person-circle" size={40} color="#1c1c1e" />
-        </TouchableOpacity>
-      </View>
-      
-      {loading && <ActivityIndicator style={{ marginBottom: 20 }} color="#28a745" />}
+        
+        {loading && <ActivityIndicator style={{ marginBottom: 20 }} color={Theme.colors.success} />}
 
-      <FlatList
-        data={[]} 
-        renderItem={null}
-        ListHeaderComponent={
-          <>
-            {renderSkillWidget()}
+        <FlatList
+          data={[]} 
+          renderItem={null}
+          ListHeaderComponent={
+            <>
+              {renderSkillWidget()}
 
-            <View style={styles.sectionHeader}>
-              <Text style={styles.subtitle}>Tus Rutinas</Text>
-              <TouchableOpacity style={styles.addBtn} onPress={handleCreateNew}>
-                <Ionicons name="add" size={20} color="#fff" />
-              </TouchableOpacity>
-            </View>
-            
-            {templates.map(item => renderRoutineItem({ item }))}
-            {templates.length === 0 && !loading && (
-              <View style={styles.emptyState}>
-                <Ionicons name="fitness-outline" size={48} color="#c7c7cc" />
-                <Text style={styles.emptyText}>No tienes rutinas todavía.</Text>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.subtitle}>Tus Rutinas</Text>
+                <TouchableOpacity style={styles.addBtn} onPress={handleCreateNew}>
+                  <Ionicons name="add" size={24} color={Theme.colors.text} />
+                </TouchableOpacity>
               </View>
-            )}
-            <View style={{ height: 40 }} />
-          </>
-        }
-        showsVerticalScrollIndicator={false}
-      />
-    </View>
+              
+              {templates.map(item => renderRoutineItem({ item }))}
+              {templates.length === 0 && !loading && (
+                <View style={styles.emptyState}>
+                  <Ionicons name="skull-outline" size={60} color={Theme.colors.cardLight} />
+                  <Text style={styles.emptyText}>Sin rutinas. Empieza tu leyenda.</Text>
+                  <TouchableOpacity style={styles.createBtn} onPress={handleCreateNew}>
+                    <Text style={styles.createBtnText}>CREAR RUTINA</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+              <View style={{ height: 40 }} />
+            </>
+          }
+          showsVerticalScrollIndicator={false}
+        />
+      </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#f2f2f7' },
+  container: { flex: 1, backgroundColor: Theme.colors.background },
+  content: { flex: 1, paddingHorizontal: Theme.spacing.md },
   header: { 
-    marginTop: 40, 
-    marginBottom: 25, 
+    marginTop: Theme.spacing.lg, 
+    marginBottom: Theme.spacing.xl, 
     flexDirection: 'row', 
     justifyContent: 'space-between', 
     alignItems: 'center' 
   },
-  welcomeText: { fontSize: 16, color: '#8e8e93', fontWeight: '600' },
-  title: { fontSize: 28, fontWeight: '900', color: '#1c1c1e', letterSpacing: -0.5 },
-  profileIcon: { opacity: 0.8 },
+  welcomeText: { ...Theme.typography.caption, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
+  title: { ...Theme.typography.h1, fontSize: 28 },
+  profileIcon: { ...Theme.shadows.medium },
   
   // Skill Widget Styles
   skillWidget: {
-    backgroundColor: '#1c1c1e',
-    borderRadius: 24,
-    padding: 20,
-    marginBottom: 30,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.2,
-    shadowRadius: 15,
-    elevation: 8,
+    backgroundColor: Theme.colors.card,
+    borderRadius: Theme.roundness.lg,
+    padding: Theme.spacing.md,
+    marginBottom: Theme.spacing.xl,
+    ...Theme.shadows.strong,
+    borderWidth: 1,
+    borderColor: Theme.colors.border,
   },
   widgetHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 15,
+    marginBottom: Theme.spacing.md,
   },
   widgetTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   trophyBg: { 
-    backgroundColor: 'rgba(255, 215, 0, 0.15)', 
-    padding: 6, 
-    borderRadius: 8 
+    backgroundColor: 'rgba(255, 215, 0, 0.1)', 
+    padding: 8, 
+    borderRadius: Theme.roundness.md 
   },
-  widgetTitle: { color: '#fff', fontSize: 16, fontWeight: '800' },
-  countText: { color: '#8e8e93', fontSize: 12, fontWeight: '700' },
-  mainProgressContainer: { marginBottom: 15 },
-  progressTrack: { height: 6, backgroundColor: '#3a3a3c', borderRadius: 3, overflow: 'hidden' },
-  progressFill: { height: '100%', backgroundColor: '#28a745' },
+  widgetTitle: { ...Theme.typography.h3, fontSize: 16 },
+  countText: { ...Theme.typography.caption, fontWeight: 'bold' },
+  mainProgressContainer: { marginBottom: Theme.spacing.md },
+  progressTrack: { height: 6, backgroundColor: Theme.colors.cardLight, borderRadius: 3, overflow: 'hidden' },
+  progressFill: { height: '100%', backgroundColor: Theme.colors.success },
   
   nextSkillCard: {
-    backgroundColor: '#2c2c2e',
-    borderRadius: 16,
-    padding: 12,
+    backgroundColor: Theme.colors.cardLight,
+    borderRadius: Theme.roundness.md,
+    padding: Theme.spacing.sm + 4,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   nextInfo: { flex: 1 },
-  nextLabel: { color: '#8e8e93', fontSize: 9, fontWeight: '900', letterSpacing: 1 },
-  nextNodeTitle: { color: '#fff', fontSize: 14, fontWeight: '700', marginTop: 2 },
+  nextLabel: { ...Theme.typography.caption, fontSize: 8, fontWeight: '900', letterSpacing: 1 },
+  nextNodeTitle: { ...Theme.typography.body, fontSize: 14, fontWeight: '800', marginTop: 2 },
   reqSummary: { gap: 4, alignItems: 'flex-end' },
   reqMiniRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  reqMiniText: { color: '#8e8e93', fontSize: 10, fontWeight: '600' },
-  reqMetText: { color: '#28a745' },
-  allDoneText: { color: '#ffd700', textAlign: 'center', fontWeight: 'bold' },
+  reqMiniText: { ...Theme.typography.caption, fontSize: 10, fontWeight: '600' },
+  reqMetText: { color: Theme.colors.success },
+  allDoneText: { color: Theme.colors.accent, textAlign: 'center', fontWeight: 'bold', fontSize: 14 },
 
   sectionHeader: { 
     flexDirection: 'row', 
     justifyContent: 'space-between', 
     alignItems: 'center', 
-    marginBottom: 20 
+    marginBottom: Theme.spacing.md 
   },
-  subtitle: { fontSize: 22, fontWeight: '900', color: '#1c1c1e' },
+  subtitle: { ...Theme.typography.h2, fontSize: 20 },
   addBtn: { 
-    backgroundColor: '#1c1c1e', 
-    width: 32, 
-    height: 32, 
-    borderRadius: 16, 
+    backgroundColor: Theme.colors.primary, 
+    width: 36, 
+    height: 36, 
+    borderRadius: 18, 
     justifyContent: 'center', 
-    alignItems: 'center' 
+    alignItems: 'center',
+    ...Theme.shadows.medium,
   },
   
   routineCard: { 
-    backgroundColor: '#fff', 
-    padding: 20, 
-    borderRadius: 20, 
-    marginBottom: 15, 
+    backgroundColor: Theme.colors.card, 
+    padding: Theme.spacing.md, 
+    borderRadius: Theme.roundness.lg, 
+    marginBottom: Theme.spacing.md, 
     flexDirection: 'row', 
     justifyContent: 'space-between', 
     alignItems: 'center',
-    shadowColor: '#000', 
-    shadowOffset: { width: 0, height: 4 }, 
-    shadowOpacity: 0.05, 
-    shadowRadius: 10, 
-    elevation: 3
+    ...Theme.shadows.light,
+    borderWidth: 1,
+    borderColor: Theme.colors.border,
+  },
+  routineIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: Theme.spacing.md,
   },
   routineInfo: { flex: 1 },
-  routineName: { fontSize: 18, fontWeight: '800', color: '#1c1c1e', marginBottom: 6 },
-  routineMeta: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  routineDate: { fontSize: 12, color: '#8e8e93', fontWeight: '600' },
-  startIconBtn: { padding: 5 },
-  emptyState: { alignItems: 'center', marginTop: 40, gap: 10 },
-  emptyText: { color: '#c7c7cc', fontSize: 16, fontWeight: '600' }
+  routineName: { ...Theme.typography.h3, fontSize: 17, marginBottom: 2 },
+  routineMeta: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  routineDate: { ...Theme.typography.caption, fontWeight: '600' },
+  cardActionRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  editBtn: { padding: 5 },
+  playBtn: { 
+    width: 36, 
+    height: 36, 
+    borderRadius: 18, 
+    backgroundColor: Theme.colors.success,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyState: { alignItems: 'center', marginTop: 60, gap: 15 },
+  emptyText: { ...Theme.typography.body, color: Theme.colors.textSecondary, fontWeight: '600' },
+  createBtn: { 
+    backgroundColor: Theme.colors.primary, 
+    paddingHorizontal: 25, 
+    paddingVertical: 12, 
+    borderRadius: Theme.roundness.full,
+    marginTop: 10
+  },
+  createBtnText: { ...Theme.typography.button, color: '#fff' }
 });

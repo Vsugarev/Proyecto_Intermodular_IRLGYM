@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ScrollView, SafeAreaView } from 'react-native';
 import { ExerciseService } from '../../../application/service/ExerciseService';
 import { LibraryExercise, TrainingBranch } from '../../../domain/entities/LibraryExercise';
+import { Theme } from '../../styles/theme';
 
 export const ExerciseCreateScreen = ({ route, navigation }: any) => {
   const { exerciseId } = route.params || {};
@@ -10,7 +11,6 @@ export const ExerciseCreateScreen = ({ route, navigation }: any) => {
   const [name, setName] = useState('');
   const [category, setCategory] = useState('Pecho');
   const [branch, setBranch] = useState<TrainingBranch>('base');
-
   const [description, setDescription] = useState('');
   const [imageUrl, setImageUrl] = useState('');
 
@@ -39,139 +39,120 @@ export const ExerciseCreateScreen = ({ route, navigation }: any) => {
     }
 
     try {
-      if (isEditing) {
-        const updatedExercise: LibraryExercise = {
-          id: exerciseId,
-          name: name.trim(),
-          category: category,
-          branch: branch,
-          description: description.trim() || undefined,
-          imageUrl: imageUrl.trim() || undefined,
-          muscleGroup: category,
-          isCustom: true,
-          isFavorite: false
-        };
-        await ExerciseService.saveCustomExercise(updatedExercise);
-        Alert.alert("Éxito", "Ejercicio actualizado correctamente");
-      } else {
-        const newExercise: LibraryExercise = {
-          id: `custom_${Date.now()}`,
-          name: name.trim(),
-          category: category,
-          branch: branch,
-          description: description.trim() || undefined,
-          imageUrl: imageUrl.trim() || undefined,
-          muscleGroup: category,
-          isCustom: true,
-          isFavorite: false
-        };
-        await ExerciseService.saveCustomExercise(newExercise);
-        Alert.alert("Éxito", "Ejercicio creado correctamente");
-      }
+      const exerciseData: LibraryExercise = {
+        id: isEditing ? exerciseId : `custom_${Date.now()}`,
+        name: name.trim(),
+        category: category,
+        branch: branch,
+        description: description.trim() || undefined,
+        imageUrl: imageUrl.trim() || undefined,
+        muscleGroup: category,
+        isCustom: true,
+        isFavorite: false
+      };
+      await ExerciseService.saveCustomExercise(exerciseData);
+      Alert.alert("Éxito", isEditing ? "Actualizado" : "Creado");
       navigation.goBack();
     } catch (e) {
-      Alert.alert("Error", "No se pudo guardar el ejercicio");
+      Alert.alert("Error", "No se pudo guardar");
     }
   };
 
   return (
-    <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <Text style={styles.label}>Nombre del Ejercicio</Text>
-        <TextInput
-          style={styles.input}
-          value={name}
-          onChangeText={setName}
-          placeholder="Ej: Press Banca con Mancuernas"
-        />
+    <SafeAreaView style={styles.container}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Nombre</Text>
+          <TextInput
+            style={styles.input}
+            value={name}
+            onChangeText={setName}
+            placeholder="Ej: Press Banca con Mancuernas"
+            placeholderTextColor={Theme.colors.textSecondary}
+          />
+        </View>
 
-        <Text style={styles.label}>Rama de Entrenamiento</Text>
-        <View style={styles.categoryContainer}>
+        <Text style={styles.label}>Rama</Text>
+        <View style={styles.chipRow}>
           {(['base', 'hypertrophy', 'powerlifting', 'calisthenics'] as TrainingBranch[]).map((b) => (
             <TouchableOpacity
               key={b}
               style={[styles.chip, branch === b && styles.activeChip]}
               onPress={() => setBranch(b)}
             >
-              <Text style={branch === b ? styles.activeText : styles.text}>
-                {b.charAt(0).toUpperCase() + b.slice(1)}
+              <Text style={[styles.chipText, branch === b && styles.activeChipText]}>
+                {b.toUpperCase()}
               </Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        <Text style={styles.label}>Categoría (Grupo Muscular)</Text>
-        <View style={styles.categoryContainer}>
+        <Text style={styles.label}>Grupo Muscular</Text>
+        <View style={styles.chipRow}>
           {['Pecho', 'Espalda', 'Pierna', 'Hombro', 'Brazo'].map((cat) => (
             <TouchableOpacity
               key={cat}
               style={[styles.chip, category === cat && styles.activeChip]}
               onPress={() => setCategory(cat)}
             >
-              <Text style={category === cat ? styles.activeText : styles.text}>{cat}</Text>
+              <Text style={[styles.chipText, category === cat && styles.activeChipText]}>{cat.toUpperCase()}</Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        <Text style={styles.label}>Descripción Técnica</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          value={description}
-          onChangeText={setDescription}
-          placeholder="Ej: Mantener la espalda recta..."
-          multiline
-          numberOfLines={4}
-        />
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Descripción</Text>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            value={description}
+            onChangeText={setDescription}
+            placeholder="Técnica, agarre, etc..."
+            placeholderTextColor={Theme.colors.textSecondary}
+            multiline
+          />
+        </View>
 
-        <Text style={styles.label}>URL de Imagen/GIF (Opcional)</Text>
-        <TextInput
-          style={styles.input}
-          value={imageUrl}
-          onChangeText={setImageUrl}
-          placeholder="https://..."
-          autoCapitalize="none"
-        />
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Imagen URL</Text>
+          <TextInput
+            style={styles.input}
+            value={imageUrl}
+            onChangeText={setImageUrl}
+            placeholder="https://..."
+            placeholderTextColor={Theme.colors.textSecondary}
+            autoCapitalize="none"
+          />
+        </View>
 
         <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
-          <Text style={styles.btnText}>GUARDAR EJERCICIO</Text>
+          <Text style={styles.saveBtnText}>{isEditing ? 'ACTUALIZAR' : 'CREAR EJERCICIO'}</Text>
         </TouchableOpacity>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#f5f5f7' },
-  label: { fontSize: 13, fontWeight: '700', color: '#8e8e93', marginBottom: 8, marginTop: 20, textTransform: 'uppercase' },
+  container: { flex: 1, backgroundColor: Theme.colors.background },
+  scrollContent: { padding: Theme.spacing.md },
+  inputGroup: { marginBottom: Theme.spacing.lg },
+  label: { ...Theme.typography.caption, fontWeight: '900', marginBottom: 10, letterSpacing: 1 },
   input: { 
-    backgroundColor: '#fff', 
-    padding: 16, 
-    borderRadius: 14, 
-    fontSize: 16, 
-    color: '#1c1c1e',
-    shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5, elevation: 2
+    backgroundColor: Theme.colors.card, padding: 16, borderRadius: Theme.roundness.md, 
+    fontSize: 16, color: Theme.colors.text, borderWidth: 1, borderColor: Theme.colors.border
   },
   textArea: { height: 120, textAlignVertical: 'top' },
-  categoryContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: Theme.spacing.lg },
   chip: { 
-    paddingHorizontal: 16, 
-    paddingVertical: 10, 
-    borderRadius: 12, 
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#e5e5ea'
+    paddingHorizontal: 12, paddingVertical: 8, borderRadius: Theme.roundness.md, 
+    backgroundColor: Theme.colors.card, borderWidth: 1, borderColor: Theme.colors.border
   },
-  activeChip: { backgroundColor: '#28a745', borderColor: '#28a745' },
-  activeText: { color: '#fff', fontWeight: 'bold' },
-  text: { color: '#1c1c1e', fontWeight: '600', fontSize: 13 },
+  activeChip: { backgroundColor: Theme.colors.primary, borderColor: Theme.colors.primary },
+  chipText: { color: Theme.colors.textSecondary, fontWeight: '800', fontSize: 11 },
+  activeChipText: { color: '#fff' },
   saveBtn: { 
-    backgroundColor: '#28a745', 
-    padding: 18, 
-    borderRadius: 16, 
-    alignItems: 'center', 
-    marginTop: 40, 
-    marginBottom: 30,
-    shadowColor: '#28a745', shadowOpacity: 0.3, shadowRadius: 10, elevation: 5
+    backgroundColor: Theme.colors.success, padding: 18, borderRadius: Theme.roundness.lg, 
+    alignItems: 'center', marginTop: Theme.spacing.lg, marginBottom: 40, ...Theme.shadows.medium
   },
-  btnText: { color: '#fff', fontWeight: 'bold', fontSize: 16 }
+  saveBtnText: { color: '#fff', fontWeight: '900', fontSize: 16 }
 });

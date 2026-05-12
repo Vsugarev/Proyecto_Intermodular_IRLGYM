@@ -92,7 +92,7 @@ export const SkillService = {
 
       if (req.workouts && Array.isArray(req.workouts)) {
         for (const wReq of req.workouts) {
-          const template = allUserWorkouts.find(w => w.name === wReq.name && w.isTemplate);
+          const template = allUserWorkouts.find((w: Workout) => w.name === wReq.name && w.isTemplate);
           const completedCount = allUserWorkouts.filter((w: Workout) => {
             const isCompleted = w.status === 'completed' && !w.isTemplate;
             const matchesTemplate = template ? w.parentId === template.id : false;
