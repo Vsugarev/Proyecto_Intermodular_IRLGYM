@@ -270,11 +270,18 @@ export const SkillsScreen = () => {
           </View>
         </View>
 
-        {/* Árbol de Habilidades (Requirement Skills-01-2) */}
+        {/* Árbol de Habilidades Dinámico */}
         <View style={styles.treeContainer}>
-          {renderBranch('base', 'fitness', 'Senda de la Fuerza')}
-          <View style={styles.branchDivider} />
-          {renderBranch('calisthenics', 'body', 'Senda del Control')}
+          {[
+            { id: 'base', icon: 'fitness', label: 'Senda de la Fuerza' },
+            { id: 'calisthenics', icon: 'body', label: 'Senda del Control' },
+            { id: 'hypertrophy', icon: 'flame', label: 'Senda de la Estética' }
+          ].map((branch, idx, arr) => (
+            <React.Fragment key={branch.id}>
+              {renderBranch(branch.id, branch.icon, branch.label)}
+              {idx < arr.length - 1 && <View style={styles.branchDivider} />}
+            </React.Fragment>
+          ))}
         </View>
       </ScrollView>
       {renderNodeModal()}
