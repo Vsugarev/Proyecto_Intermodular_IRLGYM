@@ -105,12 +105,14 @@ export const ProfileScreen = ({ navigation }: any) => {
       setIsEditing(false);
       
       if (Platform.OS === 'web') {
+        // @ts-ignore
         alert("Perfil actualizado correctamente");
       } else {
         Alert.alert("Éxito", "Perfil actualizado correctamente");
       }
     } catch (e) {
       if (Platform.OS === 'web') {
+        // @ts-ignore
         alert("No se pudo actualizar el perfil");
       } else {
         Alert.alert("Error", "No se pudo actualizar el perfil");

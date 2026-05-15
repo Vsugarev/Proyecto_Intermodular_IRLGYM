@@ -9,7 +9,8 @@ export const WorkoutService = {
       userId,
       name: name || "Nueva Plantilla",
       date: new Date().toISOString(),
-      isTemplate: true
+      isTemplate: true,
+      status: 'completed'
     };
     await WorkoutRepository.save(newWorkout);
     return newWorkout;

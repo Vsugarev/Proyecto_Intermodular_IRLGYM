@@ -42,10 +42,10 @@ class HybridRepository {
     }
   }
 
-  async delete(id: string) {
-    if (Platform.OS !== 'web') await this.local.delete(id);
+  async delete(id: string, id2?: string) {
+    if (Platform.OS !== 'web') await this.local.delete(id, id2);
     try {
-      await this.cloud.delete(id);
+      await this.cloud.delete(id, id2);
     } catch (e: any) {
       console.warn(`Error borrando en la nube: ${e.message || e}`);
     }
