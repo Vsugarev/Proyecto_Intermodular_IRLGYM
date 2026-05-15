@@ -9,7 +9,6 @@ export const WorkoutService = {
       userId,
       name: name || "Nueva Plantilla",
       date: new Date().toISOString(),
-      status: 'completed', // Las plantillas se guardan como completadas para que no salten como 'en curso'
       isTemplate: true
     };
     await WorkoutRepository.save(newWorkout);
@@ -99,14 +98,12 @@ export const WorkoutService = {
     await WorkoutRepository.save(newWorkout);
     
     for (const log of logs) {
-      // Buscamos el último registro real de este ejercicio para auto-rellenar (Hevy style)
       const lastRealLog = await LogService.getLastLogForExercise(log.exerciseId, '');
       
       await LogRepository.save({
         ...log,
         id: `log_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
         workoutId: newWorkout.id,
-        // Respetamos el NÚMERO de series de la plantilla, pero rellenamos con valores previos
         series: log.series.map((s: Set, idx: number) => {
           const lastSeries = lastRealLog?.series[idx];
           return {
@@ -139,7 +136,6 @@ export const WorkoutService = {
 
     await WorkoutRepository.save(newWorkout);
 
-    // Definición de ejercicios para rutinas de recompensa (FP nivel)
     let exerciseIds: string[] = [];
     if (routineName.includes('Fundamentos')) exerciseIds = ['ex_1', 'ex_2', 'ex_3']; // Press, Sentadilla, Peso Muerto
     else if (routineName.includes('Powerlifting')) exerciseIds = ['ex_1', 'ex_2', 'ex_3', 'ex_5']; 

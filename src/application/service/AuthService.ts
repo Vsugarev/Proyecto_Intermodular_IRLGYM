@@ -96,14 +96,12 @@ export class AuthService {
 
       if (cloudStats) await UserStatsRepository.save(cloudStats);
 
-      // Sincronizar Progreso (Nodos)
       if (cloudProgress && cloudProgress.length > 0) {
         for (const p of cloudProgress) {
           await ProgressRepository.save(p);
         }
       }
 
-      // Sincronizar Rutinas y sus Logs
       if (cloudWorkouts && cloudWorkouts.length > 0) {
         for (const w of cloudWorkouts) {
           await WorkoutRepository.save(w);
@@ -143,18 +141,14 @@ export class AuthService {
         ExerciseRepository
       } = require('../../data/repositories/index');
 
-      // 1. Borrar en la nube y localmente usando Repositorios Híbridos
-      // El orden es crucial para que las subconsultas de Cloud funcionen
       await LogRepository.deleteByUserId(uid);
       await WorkoutRepository.deleteByUserId(uid);
       await ProgressRepository.deleteByUserId(uid);
       await UserStatsRepository.deleteByUserId(uid);
       await UserProfileRepository.delete(uid);
 
-      // 2. Limpiar datos globales locales (Favoritos y Custom Exercises)
       await ExerciseRepository.clearUserData();
       
-      // 3. Borrar el usuario de Auth
       await user.delete();
     } catch (error: any) {
       console.error("Error deleting account:", error);

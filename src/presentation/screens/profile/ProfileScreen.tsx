@@ -16,7 +16,6 @@ export const ProfileScreen = ({ navigation }: any) => {
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
 
-  // Form states
   const [username, setUsername] = useState('');
   const [weight, setWeight] = useState('');
   const [units, setUnits] = useState<'kg' | 'lb'>('kg');
@@ -40,7 +39,6 @@ export const ProfileScreen = ({ navigation }: any) => {
           onPress: async () => {
             try {
               await AuthService.deleteAccount();
-              // Si tiene éxito, AppNavigator detectará el cambio de auth y sacará al usuario
             } catch (e: any) {
               if (e.message.includes("RECIENTEMENTE")) {
                 Alert.alert("Seguridad de Firebase", e.message, [

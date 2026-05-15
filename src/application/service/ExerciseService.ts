@@ -32,9 +32,7 @@ export const ExerciseService = {
   },
 
   async deleteExercise(id: string) {
-    // Primero borramos los logs asociados para evitar errores de clave foránea
     await LogRepository.deleteByExerciseId(id);
-    // Ahora ya podemos borrar el ejercicio
     await ExerciseRepository.delete(id);
   },
 
@@ -53,7 +51,6 @@ export const ExerciseService = {
 
     const logs = await LogRepository.findByExerciseId(exerciseId, uid);
     
-    // Traemos info del workout para filtrar (Clean Architecture: lógica de negocio en servicio)
     const logsWithWorkoutInfo = await Promise.all(logs.map(async (log: WorkoutLog) => {
       const { WorkoutRepository } = require('../../data/repositories/index');
       const workout = await WorkoutRepository.findById(log.workoutId);
@@ -66,7 +63,6 @@ export const ExerciseService = {
       };
     }));
 
-    // Filtramos: Solo sesiones finalizadas, NO plantillas (Hevy style)
     const history = logsWithWorkoutInfo
       .filter(l => !l.isTemplate && l.status === 'completed')
       .sort((a, b) => {
@@ -75,7 +71,6 @@ export const ExerciseService = {
         return dateB - dateA;
       });
 
-    // Cálculos de récords
     const maxWeight = history.reduce((max, log) => {
       const logMax = log.series.length > 0 ? Math.max(...log.series.map((s: Set) => s.kg || 0)) : 0;
       return Math.max(max, logMax);

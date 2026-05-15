@@ -36,7 +36,6 @@ export const LogService = {
   async getLastLogForExercise(exerciseId: string, excludeWorkoutId: string): Promise<WorkoutLog | null> {
     const allLogs = await LogRepository.findByExerciseId(exerciseId);
     
-    // Necesitamos filtrar solo sesiones reales (no plantillas) y completadas
     const validLogs = [];
     for (const log of allLogs) {
       if (log.workoutId === excludeWorkoutId) continue;

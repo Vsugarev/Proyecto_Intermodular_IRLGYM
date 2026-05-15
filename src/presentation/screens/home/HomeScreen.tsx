@@ -179,7 +179,10 @@ export const HomeScreen = ({ navigation }: { navigation: any }) => {
             <Text style={styles.welcomeText}>Panel Principal</Text>
             <Text style={styles.title}>IRLGYM <Text style={{color: Theme.colors.success}}>WARRIOR</Text></Text>
           </View>
-          <TouchableOpacity style={styles.profileIcon}>
+          <TouchableOpacity 
+            style={styles.profileIcon}
+            onPress={() => navigation.navigate('Profile')}
+          >
             <Ionicons name="person-circle" size={44} color={Theme.colors.cardLight} />
           </TouchableOpacity>
         </View>
@@ -275,7 +278,6 @@ const styles = StyleSheet.create({
   title: { ...Theme.typography.h1, fontSize: 28 },
   profileIcon: { ...Theme.shadows.medium },
   
-  // Skill Widget Styles
   skillWidget: {
     backgroundColor: Theme.colors.card,
     borderRadius: Theme.roundness.lg,

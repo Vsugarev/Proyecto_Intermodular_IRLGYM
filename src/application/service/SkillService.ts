@@ -190,7 +190,6 @@ export const SkillService = {
 
   async seedSkillsIfEmpty() {
     const initialSkills: SkillNode[] = [
-      // RAMA FUERZA (BASE) - Limpia de nutrición
       { id: 'sk_1', title: 'Fundamentos de Fuerza', branch: 'base', requirementsJson: '{"level": 1}', prevNodeId: null, xpReward: 50 },
       { id: 'sk_2', title: 'Técnica de Sentadilla', branch: 'base', requirementsJson: '{"level": 2, "exercises": [{"id": "ex_2", "sets": 3}]}', prevNodeId: 'sk_1', xpReward: 100 },
       { id: 'sk_3', title: 'Powerlifting Base', branch: 'base', requirementsJson: '{"level": 5, "workouts": [{"name": "Rutina: Fundamentos", "count": 2}]}', prevNodeId: 'sk_2', xpReward: 200 },
@@ -199,7 +198,6 @@ export const SkillService = {
       { id: 'sk_15', title: 'Guerrero de Hierro', branch: 'base', requirementsJson: '{"level": 15, "weights": [{"id": "ex_2", "kg": 120}]}', prevNodeId: 'sk_12', xpReward: 500 },
       { id: 'sk_20', title: 'Mentalidad de Acero', branch: 'base', requirementsJson: '{"level": 25, "streak": 12}', prevNodeId: 'sk_15', xpReward: 2000 },
       
-      // RAMA CALISTENIA
       { id: 'sk_4', title: 'Calistenia Inicial', branch: 'calisthenics', requirementsJson: '{"level": 1}', prevNodeId: null, xpReward: 50 },
       { id: 'sk_5', title: 'Dominio de Pull-up', branch: 'calisthenics', requirementsJson: '{"level": 3, "exercises": [{"id": "ex_5", "sets": 5}]}', prevNodeId: 'sk_4', xpReward: 100 },
       { id: 'sk_6', title: 'Fondos Explosivos', branch: 'calisthenics', requirementsJson: '{"level": 5, "exercises": [{"id": "ex_26", "sets": 6}]}', prevNodeId: 'sk_5', xpReward: 150 },
@@ -207,7 +205,6 @@ export const SkillService = {
       { id: 'sk_8', title: 'Maestría del Muscle-up', branch: 'calisthenics', requirementsJson: '{"level": 12, "exercises": [{"id": "ex_31", "sets": 1}]}', prevNodeId: 'sk_7', xpReward: 400 },
       { id: 'sk_16', title: 'Atleta Completo', branch: 'calisthenics', requirementsJson: '{"level": 20, "streak": 8}', prevNodeId: 'sk_8', xpReward: 1000 },
       
-      // RAMA HIPERTROFIA
       { id: 'sk_9', title: 'Hipertrofia: Torso', branch: 'hypertrophy', requirementsJson: '{"level": 4}', prevNodeId: null, xpReward: 150 },
       { id: 'sk_10', title: 'Hipertrofia: Pierna', branch: 'hypertrophy', requirementsJson: '{"level": 4}', prevNodeId: null, xpReward: 150 },
       { id: 'sk_13', title: 'Conexión Mente-Músculo', branch: 'hypertrophy', requirementsJson: '{"level": 7, "exercises": [{"id": "ex_22", "sets": 8}, {"id": "ex_24", "sets": 8}]}', prevNodeId: 'sk_9', xpReward: 200 },
@@ -215,7 +212,6 @@ export const SkillService = {
     ];
 
     const existing = await SkillRepository.findAll();
-    // Limpiamos y re-insertamos si hay cambios estructurales (como quitar nutrición)
     if (existing.length !== initialSkills.length) {
       await SkillRepository.deleteAll();
       await SkillRepository.saveAll(initialSkills);

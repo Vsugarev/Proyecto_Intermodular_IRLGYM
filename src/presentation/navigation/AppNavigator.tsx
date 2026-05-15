@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Platform } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { onAuthStateChanged, User } from 'firebase/auth';
@@ -16,6 +17,7 @@ import { ExerciseDetailScreen } from '../screens/routine/ExerciseDetailScreen';
 import { RoutineDetailScreen } from '../screens/routine/RoutineDetailScreen';
 import { AuthScreen } from '../screens/auth/AuthScreen';
 import { SkillsScreen } from '../screens/skills/SkillsScreen';
+import { WebDashboardScreen } from '../screens/web/WebDashboardScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -68,7 +70,7 @@ export const AppNavigator = () => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (currentUser) {
+      if (currentUser && Platform.OS !== 'web') {
         await AuthService.syncUserToLocal(currentUser.uid);
       }
       setUser(currentUser);
@@ -83,6 +85,14 @@ export const AppNavigator = () => {
     return (
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Auth" component={AuthScreen} />
+      </Stack.Navigator>
+    );
+  }
+
+  if (Platform.OS === 'web') {
+    return (
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="WebDashboard" component={WebDashboardScreen} />
       </Stack.Navigator>
     );
   }
