@@ -16,8 +16,7 @@ export class FirebaseUserProfileRepository implements IUserProfileRepository {
   }
 
   async update(profile: UserProfile): Promise<void> {
-    const docRef = doc(db, this.collection, profile.id);
-    await updateDoc(docRef, { ...profile });
+    await setDoc(doc(db, this.collection, profile.id), profile, { merge: true });
   }
 
   async delete(id: string): Promise<void> {

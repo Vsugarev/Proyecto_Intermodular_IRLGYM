@@ -141,6 +141,10 @@ export class AuthService {
         ExerciseRepository
       } = require('../../data/repositories/index');
 
+      // Intentamos borrar la cuenta de Firebase primero ("todo o nada")
+      // Si lanza auth/requires-recent-login, abortará sin borrar las rutinas locales
+      await user.delete();
+
       await LogRepository.deleteByUserId(uid);
       await WorkoutRepository.deleteByUserId(uid);
       await ProgressRepository.deleteByUserId(uid);
@@ -148,8 +152,6 @@ export class AuthService {
       await UserProfileRepository.delete(uid);
 
       await ExerciseRepository.clearUserData();
-      
-      await user.delete();
     } catch (error: any) {
       console.error("Error deleting account:", error);
       if (error.code === 'auth/requires-recent-login') {

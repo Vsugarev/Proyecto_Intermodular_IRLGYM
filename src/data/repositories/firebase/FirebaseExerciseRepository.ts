@@ -39,4 +39,11 @@ export class FirebaseExerciseRepository implements IExerciseRepository {
   async delete(id: string): Promise<void> {
     await deleteDoc(doc(db, this.col, id));
   }
+
+  async updateFavorite(id: string, isFavorite: number): Promise<void> {
+    await setDoc(doc(db, this.col, id), { isFavorite: !!isFavorite }, { merge: true });
+  }
+
+  async clearUserData(): Promise<void> {
+  }
 }

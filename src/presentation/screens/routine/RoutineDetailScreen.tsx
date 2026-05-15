@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, SafeAreaView, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { WorkoutService } from '../../../application/service/WorkoutService';
@@ -117,6 +117,36 @@ export const RoutineDetailScreen = ({ route, navigation }: any) => {
             <Ionicons name="play" size={20} color="#fff" />
             <Text style={styles.startBtnText}>EMPEZAR ENTRENAMIENTO</Text>
           </TouchableOpacity>
+
+          {!routine?.isLocked && (
+            <TouchableOpacity 
+              style={[styles.startBtn, { backgroundColor: 'transparent', borderWidth: 1, borderColor: Theme.colors.danger, marginTop: 15 }]}
+              onPress={() => {
+                const deleteAction = async () => {
+                  await WorkoutService.deleteWorkout(routineId);
+                  navigation.goBack();
+                };
+                if (Platform.OS === 'web') {
+                  // @ts-ignore
+                  if (window.confirm("¿Estás seguro de que quieres eliminar esta rutina? Esta acción no se puede deshacer.")) {
+                    deleteAction();
+                  }
+                } else {
+                  Alert.alert(
+                    "Eliminar Rutina",
+                    "¿Estás seguro de que quieres eliminar esta rutina? Esta acción no se puede deshacer.",
+                    [
+                      { text: "Cancelar", style: "cancel" },
+                      { text: "Eliminar", style: "destructive", onPress: deleteAction }
+                    ]
+                  );
+                }
+              }}
+            >
+              <Ionicons name="trash-outline" size={20} color={Theme.colors.danger} />
+              <Text style={[styles.startBtnText, { color: Theme.colors.danger }]}>ELIMINAR RUTINA</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>

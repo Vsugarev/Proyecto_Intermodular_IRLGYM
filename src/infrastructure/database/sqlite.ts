@@ -116,9 +116,7 @@ export const initDatabase = async () => {
   for (const table of TABLE_DEFINITIONS) {
     await db.execAsync(table);
   }
-
-  // Verificar y sembrar ejercicios
-  const exerciseCount = await db.getFirstAsync<{count: number}>('SELECT COUNT(*) as count FROM library_exercises');
+  const exerciseCount = await db.getFirstAsync<{ count: number }>('SELECT COUNT(*) as count FROM library_exercises');
   if (exerciseCount?.count === 0) {
     console.log("Sembrando base de datos con 30+ ejercicios...");
     for (const ex of INITIAL_EXERCISES) {
@@ -129,7 +127,7 @@ export const initDatabase = async () => {
     }
   }
 
-  // Migraciones silenciosas (en caso de que falten columnas por actualizaciones previas)
+
   const columnsToAdd = [
     { table: 'workouts', column: 'is_template', type: 'INTEGER DEFAULT 0' },
     { table: 'workouts', column: 'parent_id', type: 'TEXT' },
@@ -142,7 +140,6 @@ export const initDatabase = async () => {
     try {
       await db.execAsync(`ALTER TABLE ${col.table} ADD COLUMN ${col.column} ${col.type};`);
     } catch (e) {
-      // Columna ya existe
     }
   }
 };

@@ -16,7 +16,7 @@ export class FirebaseUserStatsRepository implements IUserStatsRepository {
   }
 
   async update(stats: UserStats): Promise<void> {
-    await updateDoc(doc(db, this.col, stats.userId), { ...stats });
+    await setDoc(doc(db, this.col, stats.userId), stats, { merge: true });
   }
 
   async deleteByUserId(userId: string): Promise<void> {

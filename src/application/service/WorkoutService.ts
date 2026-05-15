@@ -98,7 +98,7 @@ export const WorkoutService = {
     await WorkoutRepository.save(newWorkout);
     
     for (const log of logs) {
-      const lastRealLog = await LogService.getLastLogForExercise(log.exerciseId, '');
+      const lastRealLog = await LogService.getLastLogForExercise(log.exerciseId, '', userId);
       
       await LogRepository.save({
         ...log,

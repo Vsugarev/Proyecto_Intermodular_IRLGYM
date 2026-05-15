@@ -152,12 +152,37 @@ export const HomeScreen = ({ navigation }: { navigation: any }) => {
       
       <View style={styles.cardActionRow}>
         {!item.isLocked && (
-          <TouchableOpacity 
-             style={styles.editBtn} 
-             onPress={() => navigation.navigate('EditRoutine', { routine: item })}
-          >
-            <Ionicons name="settings-outline" size={20} color={Theme.colors.textSecondary} />
-          </TouchableOpacity>
+          <>
+            <TouchableOpacity 
+              style={[styles.editBtn, { marginRight: 10 }]} 
+              onPress={() => {
+                const deleteAction = async () => {
+                  await WorkoutService.deleteWorkout(item.id);
+                  const user = auth.currentUser;
+                  if (user) loadAllData(user.uid);
+                };
+                if (Platform.OS === 'web') {
+                  // @ts-ignore
+                  if (window.confirm("¿Estás seguro de que quieres eliminar esta rutina?")) {
+                    deleteAction();
+                  }
+                } else {
+                  Alert.alert("Eliminar Rutina", "¿Estás seguro?", [
+                    { text: "Cancelar", style: "cancel" },
+                    { text: "Eliminar", style: "destructive", onPress: deleteAction }
+                  ]);
+                }
+              }}
+            >
+              <Ionicons name="trash-outline" size={20} color={Theme.colors.danger} />
+            </TouchableOpacity>
+            <TouchableOpacity 
+               style={styles.editBtn} 
+               onPress={() => navigation.navigate('EditRoutine', { routine: item })}
+            >
+              <Ionicons name="settings-outline" size={20} color={Theme.colors.textSecondary} />
+            </TouchableOpacity>
+          </>
         )}
         <View style={styles.playBtn}>
           <Ionicons name="play" size={20} color={Theme.colors.text} />

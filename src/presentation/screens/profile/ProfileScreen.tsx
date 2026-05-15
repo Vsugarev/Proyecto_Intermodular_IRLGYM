@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Image, Alert, ActivityIndicator, SafeAreaView, Platform, StatusBar } from 'react-native';
-import { UserStatsRepository, UserProfileRepository, WorkoutRepository } from '../../../data/repositories/index';
+import { UserStatsService } from '../../../application/service/UserStatsService';
+import { UserProfileService } from '../../../application/service/UserProfileService';
+import { WorkoutService } from '../../../application/service/WorkoutService';
 import { AuthService } from '../../../application/service/AuthService';
 import { UserStats, UserProfile } from '../../../domain/entities/User';
 import { Workout } from '../../../domain/entities/Workout';
@@ -59,9 +61,9 @@ export const ProfileScreen = ({ navigation }: any) => {
     if (auth.currentUser) {
       const uid = auth.currentUser.uid;
       const [statsData, profileData, workoutsData] = await Promise.all([
-        UserStatsRepository.findByUserId(uid),
-        UserProfileRepository.findById(uid),
-        WorkoutRepository.findAllByUserId(uid)
+        UserStatsService.getStats(uid),
+        UserProfileService.getProfile(uid),
+        WorkoutService.getWorkoutsByUser(uid)
       ]);
       
       setStats(statsData);
@@ -98,12 +100,21 @@ export const ProfileScreen = ({ navigation }: any) => {
         measurementUnits: units
       };
       
-      await UserProfileRepository.update(updatedProfile);
+      await UserProfileService.updateProfile(updatedProfile);
       setProfile(updatedProfile);
       setIsEditing(false);
-      Alert.alert("Éxito", "Perfil actualizado correctamente");
+      
+      if (Platform.OS === 'web') {
+        alert("Perfil actualizado correctamente");
+      } else {
+        Alert.alert("Éxito", "Perfil actualizado correctamente");
+      }
     } catch (e) {
-      Alert.alert("Error", "No se pudo actualizar el perfil");
+      if (Platform.OS === 'web') {
+        alert("No se pudo actualizar el perfil");
+      } else {
+        Alert.alert("Error", "No se pudo actualizar el perfil");
+      }
     }
   };
 

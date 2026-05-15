@@ -31,7 +31,7 @@ export const RoutineEditScreen = ({ route, navigation }: { route: any, navigatio
       const logs = await LogService.getLogsByWorkout(routine.id);
       const logsWithDetails = await Promise.all(logs.map(async (log: WorkoutLog) => {
         const exercise = await ExerciseService.getExerciseById(log.exerciseId);
-        const lastLog = await LogService.getLastLogForExercise(log.exerciseId, routine.id);
+        const lastLog = await LogService.getLastLogForExercise(log.exerciseId, routine.id, routine.userId);
         return { 
           ...log, 
           exerciseName: exercise?.name || 'Ejercicio desconocido',
@@ -92,17 +92,41 @@ export const RoutineEditScreen = ({ route, navigation }: { route: any, navigatio
     const hasStructureChanged = currentStructure !== originalStructure;
 
     if (routine?.status === 'in_progress' && routine?.parentId && hasStructureChanged) {
-      Alert.alert(
-        "¿Actualizar plantilla?",
-        "¿Quieres guardar estos cambios de estructura en la rutina original?",
-        [
-          { text: "No, solo hoy", onPress: () => performSave(false), style: "cancel" },
-          { text: "Sí, actualizar", onPress: () => performSave(true) }
-        ]
-      );
-    } else {
-      performSave(false);
+      const parent = await WorkoutService.getWorkoutById(routine.parentId);
+      if (parent && !parent.isLocked) {
+        Alert.alert(
+          "¿Actualizar plantilla?",
+          "¿Quieres guardar estos cambios de estructura en la rutina original?",
+          [
+            { text: "No, solo hoy", onPress: () => performSave(false), style: "cancel" },
+            { text: "Sí, actualizar", onPress: () => performSave(true) }
+          ]
+        );
+        return;
+      }
     }
+    
+    await performSave(false);
+  };
+
+  const handleDiscard = () => {
+    Alert.alert(
+      "Descartar Entrenamiento",
+      "¿Estás seguro de que quieres descartar este entrenamiento? Se perderán todos los datos actuales.",
+      [
+        { text: "Cancelar", style: "cancel" },
+        { 
+          text: "Descartar", 
+          style: "destructive", 
+          onPress: async () => {
+            if (routine?.id) {
+              await WorkoutService.deleteWorkout(routine.id);
+            }
+            navigation.goBack();
+          }
+        }
+      ]
+    );
   };
 
   const addSet = (logId: string) => {
@@ -118,6 +142,16 @@ export const RoutineEditScreen = ({ route, navigation }: { route: any, navigatio
             rpe: lastSet?.rpe || 0 
           }]
         };
+      }
+      return ex;
+    }));
+  };
+
+  const removeSet = (logId: string, setIndex: number) => {
+    setExercises(prev => prev.map(ex => {
+      if (ex.id === logId) {
+        const newSeries = ex.series.filter((_, idx) => idx !== setIndex);
+        return { ...ex, series: newSeries };
       }
       return ex;
     }));
@@ -218,7 +252,7 @@ export const RoutineEditScreen = ({ route, navigation }: { route: any, navigatio
           />
         </View>
 
-        <TouchableOpacity onPress={() => {}} style={styles.deleteSetBtn}>
+        <TouchableOpacity onPress={() => removeSet(logId, index)} style={styles.deleteSetBtn}>
           <Ionicons name="trash-outline" size={16} color={Theme.colors.danger} />
         </TouchableOpacity>
       </View>
@@ -304,6 +338,16 @@ export const RoutineEditScreen = ({ route, navigation }: { route: any, navigatio
                   {saving ? 'GUARDANDO...' : (routine?.status === 'in_progress' ? 'FINALIZAR' : 'GUARDAR')}
                 </Text>
               </TouchableOpacity>
+
+              {routine?.status === 'in_progress' && (
+                <TouchableOpacity 
+                  style={[styles.saveBtn, { backgroundColor: 'transparent', borderWidth: 1, borderColor: Theme.colors.danger, marginTop: 15 }]} 
+                  onPress={handleDiscard}
+                  disabled={saving}
+                >
+                  <Text style={[styles.saveBtnText, { color: Theme.colors.danger }]}>DESCARTAR ENTRENAMIENTO</Text>
+                </TouchableOpacity>
+              )}
             </View>
           }
         />

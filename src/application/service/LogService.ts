@@ -33,15 +33,15 @@ export const LogService = {
     await LogRepository.delete(logId);
   },
 
-  async getLastLogForExercise(exerciseId: string, excludeWorkoutId: string): Promise<WorkoutLog | null> {
-    const allLogs = await LogRepository.findByExerciseId(exerciseId);
+  async getLastLogForExercise(exerciseId: string, excludeWorkoutId: string, userId: string): Promise<WorkoutLog | null> {
+    const allLogs = await LogRepository.findByExerciseId(exerciseId, userId);
     
     const validLogs = [];
     for (const log of allLogs) {
       if (log.workoutId === excludeWorkoutId) continue;
       
       const workout = await WorkoutRepository.findById(log.workoutId);
-      if (workout && !workout.isTemplate && workout.status === 'completed') {
+      if (workout && workout.userId === userId && !workout.isTemplate && workout.status === 'completed') {
         validLogs.push(log);
       }
     }

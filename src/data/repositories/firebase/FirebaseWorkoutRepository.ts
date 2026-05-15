@@ -32,7 +32,7 @@ export class FirebaseWorkoutRepository implements IWorkoutRepository {
   }
 
   async update(workout: Workout): Promise<void> {
-    await updateDoc(doc(db, this.colName, workout.id), { ...workout });
+    await setDoc(doc(db, this.colName, workout.id), workout, { merge: true });
   }
 
   async delete(id: string): Promise<void> {

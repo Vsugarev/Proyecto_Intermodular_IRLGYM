@@ -23,8 +23,14 @@ export const SkillService = {
       const diffTime = startOfCurrentWeek.getTime() - startOfLastWeek.getTime();
       const diffWeeks = Math.round(diffTime / (1000 * 60 * 60 * 24 * 7));
 
-      if (diffWeeks === 1) stats.streakCount += 1;
-      else if (diffWeeks > 1) stats.streakCount = 1;
+      if (diffWeeks === 1) {
+        stats.streakCount += 1;
+      } else if (diffWeeks > 1) {
+        stats.streakCount = 1;
+      } else if (stats.streakCount === 0) {
+        // Si es la primera vez que entrena (o racha estaba en 0)
+        stats.streakCount = 1;
+      }
     } else {
       stats.streakCount = 1;
     }
@@ -76,7 +82,8 @@ export const SkillService = {
       if (req.streak) details.push({ label: 'Racha', current: stats.streakCount, required: req.streak, met: stats.streakCount >= req.streak, unit: 'sem' });
 
       const allUserWorkouts = await WorkoutRepository.findAllByUserId(userId);
-      const userWorkoutIds = new Set(allUserWorkouts.map((w: Workout) => w.id));
+      const validWorkouts = allUserWorkouts.filter((w: Workout) => w.status === 'completed' && !w.isTemplate);
+      const userWorkoutIds = new Set(validWorkouts.map((w: Workout) => w.id));
 
       if (req.workouts && Array.isArray(req.workouts)) {
         for (const wReq of req.workouts) {

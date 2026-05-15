@@ -26,8 +26,8 @@ class HybridRepository {
       if (Platform.OS !== 'web' && this.local.markAsSynced) {
         await this.local.markAsSynced(data.id || data.userId);
       }
-    } catch (error) {
-      console.log("Offline or Cloud Error");
+    } catch (error: any) {
+      console.warn(`Error guardando en la nube: ${error.message || error}`);
     }
   }
 
@@ -37,8 +37,8 @@ class HybridRepository {
     }
     try {
       await this.cloud.update(data);
-    } catch (e) {
-      console.log("Error cloud update");
+    } catch (e: any) {
+      console.warn(`Error actualizando en la nube: ${e.message || e}`);
     }
   }
 
@@ -46,8 +46,8 @@ class HybridRepository {
     if (Platform.OS !== 'web') await this.local.delete(id);
     try {
       await this.cloud.delete(id);
-    } catch (e) {
-      console.log("Error cloud delete");
+    } catch (e: any) {
+      console.warn(`Error borrando en la nube: ${e.message || e}`);
     }
   }
 
@@ -55,8 +55,8 @@ class HybridRepository {
     if (Platform.OS !== 'web') await this.local.deleteByWorkoutId(workoutId);
     try {
       await this.cloud.deleteByWorkoutId(workoutId);
-    } catch (e) {
-      console.log("Error cloud deleteByWorkoutId");
+    } catch (e: any) {
+      console.warn(`Error borrando por workoutId en la nube: ${e.message || e}`);
     }
   }
 
@@ -68,8 +68,8 @@ class HybridRepository {
       if (this.cloud.deleteByExerciseId) {
         await this.cloud.deleteByExerciseId(exerciseId);
       }
-    } catch (e) {
-      console.log("Error cloud deleteByExerciseId");
+    } catch (e: any) {
+      console.warn(`Error borrando por exerciseId en la nube: ${e.message || e}`);
     }
   }
 
@@ -81,8 +81,8 @@ class HybridRepository {
       if (this.cloud.deleteByUserId) {
         await this.cloud.deleteByUserId(userId);
       }
-    } catch (e) {
-      console.log("Error cloud deleteByUserId");
+    } catch (e: any) {
+      console.warn(`Error borrando por userId en la nube: ${e.message || e}`);
     }
   }
 
@@ -94,8 +94,8 @@ class HybridRepository {
       if (this.cloud.resetAll) {
         await this.cloud.resetAll(userId);
       }
-    } catch (e) {
-      console.log("Error cloud resetAll");
+    } catch (e: any) {
+      console.warn(`Error reseteando todo en la nube: ${e.message || e}`);
     }
   }
 

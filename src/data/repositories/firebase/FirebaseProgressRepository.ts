@@ -12,7 +12,7 @@ export class FirebaseProgressRepository implements IProgressRepository {
 
   async save(progress: UserProgressNode): Promise<void> {
     const id = this.getDocId(progress.userId, progress.nodeId);
-    await setDoc(doc(db, this.col, id), progress);
+    await setDoc(doc(db, this.col, id), progress, { merge: true });
   }
 
   async find(userId: string, nodeId: string): Promise<UserProgressNode | null> {
@@ -33,14 +33,20 @@ export class FirebaseProgressRepository implements IProgressRepository {
   }
 
   async deleteByUserId(userId: string): Promise<void> {
-    await this.resetAll(userId);
+    const q = query(collection(db, this.col), where('userId', '==', userId));
+    const snap = await getDocs(q);
+    const batch = writeBatch(db);
+    snap.docs.forEach(d => batch.delete(d.ref));
+    await batch.commit();
   }
 
   async resetAll(userId: string): Promise<void> {
     const q = query(collection(db, this.col), where('userId', '==', userId));
     const snap = await getDocs(q);
     const batch = writeBatch(db);
-    snap.docs.forEach(d => batch.delete(d.ref));
+    snap.docs.forEach(d => {
+      batch.update(d.ref, { status: 'locked', currentProgress: 0 });
+    });
     await batch.commit();
   }
 }

@@ -36,7 +36,7 @@ export class FirebaseLogRepository implements ILogRepository {
   }
 
   async update(log: WorkoutLog): Promise<void> {
-    await updateDoc(doc(db, this.colName, log.id), { ...log });
+    await setDoc(doc(db, this.colName, log.id), log, { merge: true });
   }
 
   async delete(id: string): Promise<void> {
